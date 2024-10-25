@@ -6,7 +6,7 @@ from pathlib import Path
 import hydra
 from hydra.utils import instantiate
 from evaluation.face_recognition_test import Face_Fecognition_test
-from evaluation.ijb_evals import instantiate_list, init_methods
+from evaluation.evaluate import instantiate_list, init_methods
 from shutil import copyfile, rmtree
 import seaborn as sns
 import matplotlib.pyplot as plt

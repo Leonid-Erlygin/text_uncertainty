@@ -2,7 +2,7 @@ import sys
 
 sys.path.append("/app")
 import argparse
-from face_lib.utils import align_dataset_from_list
+from training.utils import align_dataset_from_list
 
 
 def parse_arguments():

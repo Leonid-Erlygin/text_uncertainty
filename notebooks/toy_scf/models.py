@@ -2,8 +2,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from face_lib.models.losses import ArcFaceLoss
-from face_lib.models.arcface import MetricLearningModel
+from training.models.losses import ArcFaceLoss
+from training.models.arcface import MetricLearningModel
 from torch.utils.data import DataLoader
 from utils_notebooks import predict_features, compute_distance_and_visualize
 from pathlib import Path
@@ -11,9 +11,9 @@ from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning import Trainer
 import datetime
-from face_lib.models.scf import SphereConfidenceFace, SoftmaxWeights
-from face_lib.models.heads import SCFHead
-from face_lib.models.losses import KLDiracVMF
+from training.models.scf import SphereConfidenceFace, SoftmaxWeights
+from training.models.heads import SCFHead
+from training.models.losses import KLDiracVMF
 import pytorch_lightning
 from pytorch_lightning.callbacks import LearningRateMonitor
 from evaluation.visualize import (

@@ -1,6 +1,7 @@
 outputs
 cache
 multirun
+.hydra
 .vscode
 datasets
 unsorted_data
