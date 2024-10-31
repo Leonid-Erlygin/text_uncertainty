@@ -76,11 +76,6 @@ class VonMisesFisher:
                     random_VMF,
                     zip(feature_mean, kappas, [self.num_samples] * len(feature_mean)),
                 )
-            # for mu, kappa in zip(feature_mean, kappas):
-            #     samples = random_VMF(mu, kappa=kappa[0], size=self.num_samples)[
-            #         np.newaxis, :, :
-            #     ]
-            #     sample_list.append(samples)
             return np.concatenate(sample_list, axis=0)
         else:
             return feature_mean[:, np.newaxis, :]
