@@ -6,5 +6,5 @@ setuptools.setup(
     author="You",
     author_email="you@example.com",
     description="This is my project",
-    packages=["face_lib", "evaluation"],
+    packages=["training", "evaluation"],
 )

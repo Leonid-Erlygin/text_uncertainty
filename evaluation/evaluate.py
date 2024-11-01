@@ -425,26 +425,26 @@ def main(cfg):
                 rejection_df.to_csv(
                     filter_tables_dir / f'{metric_name.split(":")[-1]}_filtering.csv'
                 )
-                # save auc table
+                # # save auc table
 
-                auc_at_far_data_frames.append(
-                    pd.DataFrame(
-                        {
-                            "models": far_to_model_names[far],
-                            f"FAR={far}": rejection_metric_values,
-                        }
-                    )
-                )
+                # auc_at_far_data_frames.append(
+                #     pd.DataFrame(
+                #         {
+                #             "models": far_to_model_names[far],
+                #             f"FAR={far}": rejection_metric_values,
+                #         }
+                #     )
+                # )
             for i in range(len(auc_at_far_data_frames) - 1):
                 auc_at_far_data_frames[0] = pd.merge(
                     auc_at_far_data_frames[0],
                     auc_at_far_data_frames[i + 1],
                     on="models",
                 )
-            auc_at_far_data_frames[0].to_csv(
-                aggr_filter_tables_dir
-                / f'{metric_name.split(":")[-1]}_prr_filtering.csv'
-            )
+            # auc_at_far_data_frames[0].to_csv(
+            #     aggr_filter_tables_dir
+            #     / f'{metric_name.split(":")[-1]}_prr_filtering.csv'
+            # )
             continue
             # save trans auc table
             new_auc_df_lines = []
