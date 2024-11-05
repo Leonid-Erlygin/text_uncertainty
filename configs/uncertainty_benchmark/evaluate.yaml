@@ -76,7 +76,7 @@ open_set_identification_methods:
   #     class_model: power
   #     far: ${far_list}
   #     beta: ${default_beta}
-  #     gallery_kappa: 500
+  #     gallery_kappa: 651.2777
   #     uncertainty_type: maxprob
   #     alpha: 1 # when 1, only scf unc is used
   #     aggregation: sum
@@ -92,13 +92,13 @@ open_set_identification_methods:
     use_detector_score: False
     recognition_method:
       _target_: evaluation.open_set_methods.class_prob_models.MonteCarloPredictiveProb
-      M: 10
+      M: 0
       gallery_prior: power
       emb_unc_model: vMF
       kappa_input_scale: 1
       beta: 0.5
-      gallery_kappa: 500
-      predict_T: 1
+      gallery_kappa: 651.2777
+      predict_T: 1.0
       pred_uncertainty_type: entropy
       far: ${far_list}
     pretty_name: "$u_{MC}$"

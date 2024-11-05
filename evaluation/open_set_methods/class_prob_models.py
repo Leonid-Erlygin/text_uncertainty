@@ -155,7 +155,9 @@ class MonteCarloPredictiveProb:
 
     def predict_uncertainty(self):
         if self.pred_uncertainty_type == "entropy":
-            unc = -(self.kl_1 + self.kl_2)
+            # unc = -(self.kl_1 + self.kl_2 / 640)
+            # unc = -self.kl_1
+            unc = -self.kl_2
         return unc
 
     def compute_mean_probs_and_kl(
@@ -235,6 +237,9 @@ class MonteCarloPredictiveProb:
         kl_1 = torch.sum(
             mean_gallery_probs * torch.log(mean_gallery_probs / p_c), axis=1
         )
+        # kl_1 = torch.sum(
+        #     mean_gallery_probs * torch.log(mean_gallery_probs), axis=1
+        # )
 
         # compute kl_2
         # 1. compute log p(z_i|x)
@@ -254,16 +259,20 @@ class MonteCarloPredictiveProb:
 
             sim_mult_kappa = torch.multiply(
                 similarities,
-                (kappa[:, np.newaxis] * (1 / T)),
+                (kappa[:, np.newaxis]),
                 out=similarities,
             )
             log_p_z_given_x = torch.add(
                 log_normalizer[:, np.newaxis], sim_mult_kappa, out=similarities
             )
             kl_2 = self.beta * torch.mean(
-                (log_p_z_given_x - log_z_prob) / (self.beta ** (1 / T) + logit_sum),
+                (log_p_z_given_x - log_z_prob) / (self.beta + logit_sum),
                 axis=1,
             )
+            # kl_2 = self.beta * torch.mean( # default scf
+            #     (log_p_z_given_x),
+            #     axis=1,
+            # )
         else:
             raise ValueError
         return mean_gallery_probs, kl_1, kl_2
