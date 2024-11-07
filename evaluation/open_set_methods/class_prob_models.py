@@ -6,6 +6,8 @@ import numpy as np
 from evaluation.samplers import VonMisesFisher
 from scipy.optimize import fsolve, minimize
 from scipy.special import ive, hyp0f1, loggamma
+from evaluation.metrics import FrrFarIdent
+from pathlib import Path
 
 
 class GalleryMeans(torch.nn.Module):
@@ -37,6 +39,8 @@ class MonteCarloPredictiveProb:
         kappa_input_scale: float = 1.0,
         predict_T: float = 1.0,
         pred_uncertainty_type: str = "entropy",
+        alpha: float = 0.5,
+        log_dir: str = None,
     ) -> None:
         """
         params:
@@ -65,6 +69,8 @@ class MonteCarloPredictiveProb:
         self.predict_T = predict_T
         self.pred_uncertainty_type = pred_uncertainty_type
         assert self.pred_uncertainty_type in ["entropy", "max_prob"]
+        self.alpha = alpha
+        self.log_dir = log_dir
 
     def setup(
         self,
@@ -81,6 +87,9 @@ class MonteCarloPredictiveProb:
         probe_unc = probe_unc.astype(dtype)
         gallery_feats = gallery_feats.astype(dtype)
         gallery_unc = gallery_unc.astype(dtype)
+        self.g_unique_ids = g_unique_ids
+        self.probe_unique_ids = probe_unique_ids
+
         if g_unique_ids is not None and self.gallery_kappa == None:
             # find kappa
             is_seen = np.isin(probe_unique_ids, g_unique_ids)
@@ -151,13 +160,31 @@ class MonteCarloPredictiveProb:
         oog_prob = 1 - np.sum(predict_probs, axis=-1, keepdims=True)
         all_prob = np.concatenate([predict_probs, oog_prob], axis=-1)
         was_rejected = np.argmax(all_prob, axis=-1) == (all_prob.shape[-1] - 1)
+        if self.log_dir is not None:
+            # log error indicators and unc
+            true_pred_label = np.zeros(self.probe_unique_ids.shape[0])
+            error_calc = FrrFarIdent()
+            error_calc(
+                predict_id,
+                was_rejected,
+                self.g_unique_ids,
+                self.probe_unique_ids,
+            )
+            true_pred_label[error_calc.is_seen] = error_calc.true_accept_true_ident
+            true_pred_label[~error_calc.is_seen] = error_calc.true_reject
+            np.savez(
+                Path(self.log_dir) / f"kl_and_target_{self.predict_T}_M={self.M}.npz",
+                kl_1=self.kl_1,
+                kl_2=self.kl_2,
+                true_pred_label=true_pred_label,
+            )
         return predict_id, was_rejected
 
     def predict_uncertainty(self):
         if self.pred_uncertainty_type == "entropy":
-            # unc = -(self.kl_1 + self.kl_2 / 640)
+            unc = -(self.alpha * self.kl_1 + (1 - self.alpha) * self.kl_2)
             # unc = -self.kl_1
-            unc = -self.kl_2
+            # unc = -self.kl_2
         return unc
 
     def compute_mean_probs_and_kl(
@@ -184,7 +211,7 @@ class MonteCarloPredictiveProb:
                 - torch.special.gammaln(d / 2)
                 - torch.special.gammaln(d - 1 + 2 * gallery_kappas)
             )
-            m_c_power = torch.exp(log_m_c_power)
+            # m_c_power = torch.exp(log_m_c_power)
             log_uniform_dencity = (
                 torch.special.gammaln(d / 2) - np.log(2) - (d / 2) * np.log(np.pi)
             )
@@ -192,16 +219,18 @@ class MonteCarloPredictiveProb:
         assert self.gallery_prior == "power"
         # compute log z prob
         p_c = ((1 - self.beta) / self.K) ** (1 / T)
-        sim_to_power = torch.pow(
-            torch.add(similarities, 1, out=similarities),
+        sim_to_power_log = torch.multiply(
+            torch.log(torch.add(similarities, 1, out=similarities), out=similarities),
             (gallery_kappas[..., :, 0] * (1 / T)),
             out=similarities,
         )
+        logit_add = torch.add(
+            sim_to_power_log, log_m_c_power[..., :, 0] * (1 / T), out=similarities
+        )
+        logit_exp = torch.exp(logit_add, out=similarities)
         logit_sum = (
             torch.sum(
-                torch.mul(
-                    sim_to_power, m_c_power[..., :, 0] ** (1 / T), out=similarities
-                ),
+                logit_exp,
                 dim=-1,
             )
             * p_c
@@ -212,20 +241,20 @@ class MonteCarloPredictiveProb:
 
         # compute gallery classes log prob
         similarities = torch.matmul(zs, gallery_means.T, out=similarities)
-        sim_to_power = torch.pow(
-            torch.add(similarities, 1, out=similarities),
+        sim_to_power_log = torch.multiply(
+            torch.log(torch.add(similarities, 1, out=similarities), out=similarities),
             (gallery_kappas[..., :, 0] * (1 / T)),
             out=similarities,
         )
-        pz_c = torch.add(
-            torch.log(sim_to_power, out=similarities),
+        pz_c_log = torch.add(
+            sim_to_power_log,
             (1 / T) * log_normalizer[..., :, 0],
             out=similarities,
         )
 
         gallery_log_probs = torch.sub(
             torch.add(
-                pz_c, (1 / T) * np.log((1 - self.beta) / self.K), out=similarities
+                pz_c_log, (1 / T) * np.log((1 - self.beta) / self.K), out=similarities
             ),
             log_z_prob[..., np.newaxis],
             out=similarities,
@@ -259,13 +288,15 @@ class MonteCarloPredictiveProb:
 
             sim_mult_kappa = torch.multiply(
                 similarities,
-                (kappa[:, np.newaxis]),
+                kappa[:, np.newaxis],  # * (1 / T),
                 out=similarities,
             )
             log_p_z_given_x = torch.add(
-                log_normalizer[:, np.newaxis], sim_mult_kappa, out=similarities
+                log_normalizer[:, np.newaxis],  # * (1 / T),
+                sim_mult_kappa,
+                out=similarities,
             )
-            kl_2 = self.beta * torch.mean(
+            kl_2 = (self.beta) ** (1 / T) * torch.mean(
                 (log_p_z_given_x - log_z_prob) / (self.beta + logit_sum),
                 axis=1,
             )
