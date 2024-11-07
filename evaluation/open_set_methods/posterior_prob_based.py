@@ -214,6 +214,7 @@ class PosteriorProbability(OpenSetMethod):
         calibrate_by_false_reject: bool = False,
         calibrate_gallery_unc: str = None,
         calibration_set: FaceRecogntionDataset = None,
+        log_dir=None,
     ) -> None:
         super().__init__()
         self.distance_function = distance_function
@@ -232,7 +233,7 @@ class PosteriorProbability(OpenSetMethod):
         self.calibrate_by_false_reject = calibrate_by_false_reject
         self.calibrate_gallery_unc = calibrate_gallery_unc
         self.calibration_set = calibration_set
-
+        self.log_dir = log_dir
         if calibration_set is None:
             return
         self.gallery_pooled_templates_calib, self.probe_pooled_templates_calib = (
@@ -597,6 +598,11 @@ class PosteriorProbability(OpenSetMethod):
             comb_conf = (conf_gallery ** (1 - self.alpha)) * (data_conf**self.alpha)
         else:
             raise ValueError
+        if self.log_dir is not None:
+            np.savez(
+                Path(self.log_dir) / f"scf.npz",
+                kappa=comb_conf,
+            )
         return -comb_conf
 
 
