@@ -78,7 +78,6 @@ class MXFaceDataset(Dataset):
                 [
                     v2.ToPILImage(),
                     v2.ToTensor(),
-                    # v2.RandomApply(torch.nn.ModuleList([v2.AugMix(severity = 7, mixture_width = 3)]), p=0.7),
                     v2.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
                 ]
             )
@@ -245,6 +244,7 @@ class MXFaceDataset(Dataset):
             if self.torch_transform is not None:
                 sample = self.torch_transform(sample)
         if self.test:
+            sample = self.transform(sample)
             return sample
         else:
             return sample, label

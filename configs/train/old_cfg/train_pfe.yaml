@@ -17,12 +17,12 @@ trainer:
   - class_path: pytorch_lightning.callbacks.LearningRateMonitor
     init_args: 
       logging_interval: "step"
-  - class_path: face_lib.models.scf.Prediction_writer
+  - class_path: training.models.scf.Prediction_writer
     init_args: 
       output_dir: /app/cache/features
       file_name: pfe_qmul_survFace 
       write_interval: epoch
-  # - class_path: face_lib.models.pfe.IJB_writer
+  # - class_path: training.models.pfe.IJB_writer
   #   init_args: 
   #     output_dir: /app/cache/features
   #     subset: ${data.init_args.data_predict_subset}
@@ -31,27 +31,27 @@ trainer:
   accelerator: gpu
   devices: 2
 model:
-    class_path: face_lib.models.pfe.ProbabilisticFaceEmbedding
+    class_path: training.models.pfe.ProbabilisticFaceEmbedding
     init_args:
         weights: /app/model_weights/pfe_old/sota.pth
         backbone:
-            class_path: face_lib.models.lightning_wrappers.ResNet
+            class_path: training.models.lightning_wrappers.ResNet
             init_args:
                 resnet_name: iresnet50_normalized
                 weights: /app/model_weights/backbone/ms1mv3_arcface_r50/backbone.pth
                 learnable: False
         head:
-            class_path: face_lib.models.heads.PFEHeadAdjustableLightning
+            class_path: training.models.heads.PFEHeadAdjustableLightning
             init_args:
               in_feat: 25088
               out_feat: 512
               learnable: True
         pfe_loss:
-            class_path: face_lib.models.losses.PFELoss
+            class_path: training.models.losses.PFELoss
             init_args:
               mean: True
         optimizer_params:
-            optimizer_path: face_lib.optimizers.lars
+            optimizer_path: training.optimizers.lars
             optimizer_name: LARS
             params:
                 lr: 0.00000001
@@ -65,11 +65,11 @@ model:
             frequency: 1
 
 data:
-    class_path: face_lib.datasets.lightning_datasets.UncertaintyDataModule
+    class_path: training.datasets.lightning_datasets.UncertaintyDataModule
     init_args:
         data_train_dir: /app/datasets/ms1m/
         predict_dataset:
-            class_path: face_lib.datasets.qmul.SurvFace
+            class_path: training.datasets.qmul.SurvFace
             init_args:
                 data_dir: /app/datasets/QMUL-SurvFace/Face_Identification_Test_Set
         # data_predict_dir: /app/datasets/arcface_ijb
@@ -78,7 +78,7 @@ data:
         num_workers: 20
 
 # data:
-#     class_path: face_lib.datasets.lightning_datasets.UncertaintyDataModule
+#     class_path: training.datasets.lightning_datasets.UncertaintyDataModule
 #     init_args:
 #         data_train_dir: /app/datasets/ms1m/
 #         add_nose: False

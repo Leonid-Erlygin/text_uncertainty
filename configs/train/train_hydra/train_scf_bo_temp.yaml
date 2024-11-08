@@ -40,7 +40,7 @@ trainer:
     save_last: true
   - _target_: pytorch_lightning.callbacks.LearningRateMonitor
     logging_interval: step
-  - _target_: face_lib.models.scf.Prediction_writer
+  - _target_: training.models.scf.Prediction_writer
     output_dir: /app/cache/features
     file_name: scf_vgg_from_zero
     write_interval: epoch
@@ -54,22 +54,22 @@ trainer:
   val_check_interval: 5543
   enable_checkpointing: true
 model:
-  _target_: face_lib.models.scf.SphereConfidenceFace
+  _target_: training.models.scf.SphereConfidenceFace
   backbone:
-    _target_: face_lib.models.lightning_wrappers.ResNet
+    _target_: training.models.lightning_wrappers.ResNet
     resnet_name: iresnet50_normalized
     weights: /app/model_weights/backbone/ms1mv3_arcface_r50/backbone.pth
     learnable: false
   head:
-    _target_: face_lib.models.heads.SCFHead
+    _target_: training.models.heads.SCFHead
     convf_dim: 25088
     latent_vector_size: 4096
   scf_loss:
-    _target_: face_lib.models.losses.KLDiracVMF
+    _target_: training.models.losses.KLDiracVMF
     z_dim: 512
     radius: 64
   softmax_weights:
-    _target_: face_lib.models.scf.SoftmaxWeights
+    _target_: training.models.scf.SoftmaxWeights
     softmax_weights_path: /app/model_weights/backbone/ms1mv3_arcface_r50/softmax_weight.pt
     radius: 64
   optimizer_params:
@@ -88,7 +88,7 @@ model:
       final_div_factor: 10.0
     interval: step
   validation_dataset:
-    _target_: face_lib.dataset_classes.arcface_ijb.IJB_aligned_images
+    _target_: training.dataset_classes.arcface_ijb.IJB_aligned_images
     dataset_path: /app/datasets/arcface_ijb/IJBC
     dataset_name: IJBC
     norm_image: true
@@ -128,9 +128,9 @@ model:
       - 0.001
       - 0.01
 data:
-  _target_: face_lib.dataset_classes.lightning_datasets.UncertaintyDataModule
+  _target_: training.dataset_classes.lightning_datasets.UncertaintyDataModule
   train_dataset:
-    _target_: face_lib.dataset_classes.lightning_datasets.MXFaceDataset
+    _target_: training.dataset_classes.lightning_datasets.MXFaceDataset
     root_dir: /app/datasets/ms1m/
     torch_augments:
     - class_path: torchvision.transforms.v2
@@ -140,12 +140,12 @@ data:
         sigma: 4
     torch_probability: 0.5
   validation_dataset:
-    _target_: face_lib.dataset_classes.arcface_ijb.IJB_aligned_images
+    _target_: training.dataset_classes.arcface_ijb.IJB_aligned_images
     dataset_path: /app/datasets/arcface_ijb/IJBC
     dataset_name: IJBC
     norm_image: true
   predict_dataset:
-    _target_: face_lib.dataset_classes.arcface_ijb.IJB_aligned_images
+    _target_: training.dataset_classes.arcface_ijb.IJB_aligned_images
     dataset_path: /app/datasets/arcface_ijb/IJBC
     dataset_name: IJBC
     norm_image: true

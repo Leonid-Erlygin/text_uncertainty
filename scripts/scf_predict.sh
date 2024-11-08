@@ -10,4 +10,4 @@ docker run \
  --gpus '"device=0"' \
  -w="/app" \
  ${USER}_$(basename $(dirname "$PWD")) \
- python3 trainers/train_multiple_runs_scf.py -cn=predict_scf
+ python3 training/trainers/train_multiple_runs_scf.py -cn=predict_scf

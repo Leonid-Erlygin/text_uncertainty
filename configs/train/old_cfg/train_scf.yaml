@@ -16,12 +16,12 @@ trainer:
   - class_path: pytorch_lightning.callbacks.LearningRateMonitor
     init_args: 
       logging_interval: "step"
-#   - class_path: face_lib.models.scf.Prediction_writer
+#   - class_path: training.models.scf.Prediction_writer
 #     init_args: 
 #       output_dir: /app/datasets/arcface_ijb/IJBC/embeddings
 #       file_name: uniform_scf_embs_IJBC
 #       write_interval: epoch
-  - class_path: face_lib.models.scf.Prediction_writer
+  - class_path: training.models.scf.Prediction_writer
     init_args: 
       output_dir: /app/cache/five_ds_embs
       file_name: default-scf_embs_five_ds
@@ -31,26 +31,26 @@ trainer:
   devices: 1
   num_sanity_val_steps: 0
 model:
-    class_path: face_lib.models.scf.SphereConfidenceFace
+    class_path: training.models.scf.SphereConfidenceFace
     init_args:
         backbone:
-            class_path: face_lib.models.lightning_wrappers.ResNet
+            class_path: training.models.lightning_wrappers.ResNet
             init_args:
                 resnet_name: iresnet50_normalized
                 weights: /app/model_weights/backbone/ms1mv3_arcface_r50/backbone.pth
                 learnable: False
         head:
-            class_path: face_lib.models.heads.SCFHead
+            class_path: training.models.heads.SCFHead
             init_args:
                 convf_dim: 25088
                 latent_vector_size: 12544
         scf_loss:
-            class_path: face_lib.models.losses.KLDiracVMF
+            class_path: training.models.losses.KLDiracVMF
             init_args:
                 z_dim: 512
                 radius: 64
         softmax_weights:
-            class_path: face_lib.models.scf.SoftmaxWeights
+            class_path: training.models.scf.SoftmaxWeights
             init_args:
                 softmax_weights_path: /app/model_weights/backbone/ms1mv3_arcface_r50/softmax_weight.pt
                 radius: 64 #${model.scf_loss.init_args.radius}
@@ -69,7 +69,7 @@ model:
             frequency: 1
         permute_batch: False
         validation_dataset:
-            class_path: face_lib.dataset_classes.arcface_ijb.IJB_aligned_images
+            class_path: training.dataset_classes.arcface_ijb.IJB_aligned_images
             init_args:
                 dataset_path: /app/datasets/arcface_ijb/IJBC
                 dataset_name: IJBC
@@ -87,26 +87,26 @@ model:
               display_fars: [1e-6, 1e-5, 1e-4, 1e-3, 1e-2]
 
 data:
-    class_path: face_lib.dataset_classes.lightning_datasets.UncertaintyDataModule
+    class_path: training.dataset_classes.lightning_datasets.UncertaintyDataModule
     init_args:
         train_dataset:
-            class_path: face_lib.dataset_classes.lightning_datasets.MXFaceDataset
+            class_path: training.dataset_classes.lightning_datasets.MXFaceDataset
             init_args:
                 root_dir: /app/datasets/ms1m/
         validation_dataset:
-            class_path: face_lib.dataset_classes.arcface_ijb.IJB_aligned_images
+            class_path: training.dataset_classes.arcface_ijb.IJB_aligned_images
             init_args:
                 dataset_path: /app/datasets/arcface_ijb/IJBC
                 dataset_name: IJBC
                 norm_image: True
         train_batch_sampler:
-            class_path: face_lib.dataset_classes.samplers.UniformBatchSamplerWithBins
+            class_path: training.dataset_classes.samplers.UniformBatchSamplerWithBins
             init_args:
                 cosine_sim_path: /app/model_weights/ms1m_cache/cosine_sim.npy
                 batch_size: 400
                 cosine_border_values: [0.7, 0.75, 0.8, 0.85, 1]
         # train_batch_sampler:
-        #     class_path: face_lib.dataset_classes.samplers.UniformBatchSampler
+        #     class_path: training.dataset_classes.samplers.UniformBatchSampler
         #     init_args:
         #         cosine_sim_path: /app/model_weights/ms1m_cache/cosine_sim.npy
         #         batch_size: 400
@@ -114,7 +114,7 @@ data:
         num_workers: 40
 
         # predict_dataset:
-        #     class_path: face_lib.dataset_classes.lightning_datasets.MXFaceDataset
+        #     class_path: training.dataset_classes.lightning_datasets.MXFaceDataset
         #     init_args:
         #         root_dir: /app/datasets/ms1m/
 
@@ -126,36 +126,36 @@ data:
                 concat_mem_file_name: 'five_mem_concat'
 
         # predict_dataset:
-        #     class_path: face_lib.dataset_classes.arcface_ijb.IJB_aligned_images
+        #     class_path: training.dataset_classes.arcface_ijb.IJB_aligned_images
         #     init_args:
         #         dataset_path: /app/datasets/arcface_ijb/IJBC
         #         dataset_name: IJBC
         #         norm_image: True
 # predict_dataset:
-#     class_path: face_lib.dataset_classes.lightning_datasets.MXFaceDataset
+#     class_path: training.dataset_classes.lightning_datasets.MXFaceDataset
 #     init_args: 
 #         root_dir: /app/datasets/ms1m/
 #         test: True
 #         num_classes: 3531
 # predict_dataset:
-#     class_path: face_lib.dataset_classes.arcface_ijb.IJB_aligned_images
+#     class_path: training.dataset_classes.arcface_ijb.IJB_aligned_images
 #     init_args:
 #         dataset_path: /app/datasets/gaussian_nose
 #         dataset_name: nose
 #         norm_image: True
 # predict_dataset:
-#     class_path: face_lib.dataset_classes.arcface_ijb.IJB_aligned_images
+#     class_path: training.dataset_classes.arcface_ijb.IJB_aligned_images
 #     init_args:
 #         dataset_path: /app/datasets/interpolation
 #         dataset_name: inter
 #         norm_image: True
 # predict_dataset:
-#     class_path: face_lib.dataset_classes.lfw.LFW_aligned_images
+#     class_path: training.dataset_classes.lfw.LFW_aligned_images
 #     init_args:
 #         dataset_path: /app/datasets/lfw/data_aligned_112_112
         #norm_image: True
 # predict_dataset:
-#     class_path: face_lib.dataset_classes.arcface_ijb.IJB_aligned_images
+#     class_path: training.dataset_classes.arcface_ijb.IJB_aligned_images
 #     init_args:
 #         dataset_path: /app/datasets/arcface_ijb/IJBB
 #         dataset_name: IJBB

@@ -17,7 +17,7 @@ trainer:
   - class_path: pytorch_lightning.callbacks.LearningRateMonitor
     init_args: 
       logging_interval: "step"
-  - class_path: face_lib.models.scf.IJB_writer
+  - class_path: training.models.scf.IJB_writer
     init_args: 
       output_dir: /app/cache/features
       subset: ${data.init_args.data_predict_subset}
@@ -26,31 +26,31 @@ trainer:
   accelerator: gpu
   devices: 2
 model:
-    class_path: face_lib.models.scf.SphereConfidenceFace
+    class_path: training.models.scf.SphereConfidenceFace
     init_args:
         backbone:
-            class_path: face_lib.models.lightning_wrappers.ResNet
+            class_path: training.models.lightning_wrappers.ResNet
             init_args:
                 resnet_name: iresnet50_normalized
                 weights: /app/model_weights/backbone/ms1mv3_arcface_r50/backbone.pth
                 learnable: False
         head:
-            class_path: face_lib.models.heads.SCFHead
+            class_path: training.models.heads.SCFHead
             init_args:
                 convf_dim: 25088
                 latent_vector_size: 2048
         scf_loss:
-            class_path: face_lib.models.losses.KLDiracVMF
+            class_path: training.models.losses.KLDiracVMF
             init_args:
                 z_dim: 512
                 radius: 64
         softmax_weights:
-            class_path: face_lib.models.scf.SoftmaxWeights
+            class_path: training.models.scf.SoftmaxWeights
             init_args:
                 softmax_weights_path: /app/model_weights/backbone/ms1mv3_arcface_r50/softmax_weight.pt
                 radius: 64 #${model.scf_loss.init_args.radius}
         optimizer_params:
-            optimizer_path: face_lib.optimizers.lars
+            optimizer_path: training.optimizers.lars
             optimizer_name: LARS
             params:
                 lr: 0.15 #= 0.3 × BatchSize/256
@@ -70,7 +70,7 @@ model:
 
 
 data:
-    class_path: face_lib.datasets.lightning_datasets.UncertaintyDataModule
+    class_path: training.datasets.lightning_datasets.UncertaintyDataModule
     init_args:
         data_train_dir: /app/datasets/ms1m/
         add_nose: False

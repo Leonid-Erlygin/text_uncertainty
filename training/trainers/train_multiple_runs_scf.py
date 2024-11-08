@@ -15,7 +15,7 @@ sys.path.append("/app")
 
 @hydra.main(version_base=None, config_path="/app/configs/train/train_hydra")
 def train_model(cfg):
-
+    print(cfg)
     seed_everything(cfg.seed_everything, workers=True)
 
     trainer = instantiate(cfg.trainer)
