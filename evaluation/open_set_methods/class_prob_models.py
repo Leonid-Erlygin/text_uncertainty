@@ -131,7 +131,7 @@ class NNcalibration:
 
             loss.backward()
             optimizer.step()
-            # print(f"Iteration {iter}, Loss: {loss.item()}")
+            print(f"Iteration {iter}, Loss: {loss.item()}")
 
             # self.perceptron.eval()
             # pred_eval = self.perceptron(X_norm)
@@ -342,7 +342,7 @@ class MonteCarloPredictiveProb:
             calibratation_set_kappa = golden_selection_search(
                 kappa_high, kappa_low, eps, max_iter, far_loss_func_calib
             )
-            # calibratation_set_kappa = 714.2059
+            # calibratation_set_kappa = 519.1576
             print(
                 f"Found kappa_calib {np.round(calibratation_set_kappa,4)} for far {self.far}"
             )
