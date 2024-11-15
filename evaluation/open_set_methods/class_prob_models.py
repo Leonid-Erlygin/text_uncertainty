@@ -1,6 +1,8 @@
 from typing import Any
 
-
+from matplotlib import cm, ticker
+import matplotlib.pyplot as plt
+import seaborn as sns
 import torch
 import torch.nn as nn
 import numpy as np
@@ -8,6 +10,7 @@ from evaluation.samplers import VonMisesFisher
 from scipy.optimize import fsolve, minimize
 from scipy.special import ive, hyp0f1, loggamma
 from evaluation.metrics import FrrFarIdent
+from utils.golden_section import golden_selection_search
 
 # from evaluation.template_pooling_strategies import PoolingDefault
 from evaluation.open_set_methods.calibration_utils import prepare_calibration_dataset
@@ -33,29 +36,46 @@ class GalleryParams(torch.nn.Module):
 class FarLossCalc:
     def __init__(
         self,
+        probe_feats,
+        probe_unc_scaled,
+        gallery_feats,
+        gallery_unc,
+        predict_T,
+        target_far,
+        is_seen,
         env,
     ) -> None:
+        self.probe_feats = probe_feats
+        self.probe_unc_scaled = probe_unc_scaled
+        self.gallery_feats = gallery_feats
+        self.gallery_unc = gallery_unc
+        self.predict_T = predict_T
+        self.target_far = target_far
+        self.is_seen = is_seen
         self.env = env
+
     def __call__(self, kappa: float) -> float:
-        posterior_prob = PosteriorProb(
-            kappa=kappa,
-            beta=self.beta,
-            class_model=self.class_model,
-            K=self.similarity_matrix.shape[-1],
+        gallery_unc_scaled = np.ones_like(self.gallery_unc) * kappa
+        out = self.env.compute_mean_probs_and_kl(
+            self.probe_feats,
+            self.probe_unc_scaled,
+            self.gallery_feats,
+            gallery_unc_scaled,
+            self.predict_T,
         )
-        all_classes_log_prob = posterior_prob.compute_all_class_log_probabilities(
-            self.similarity_matrix, self.T
-        )
-        all_classes_log_prob = torch.mean(all_classes_log_prob, dim=1).numpy()
-        was_rejected = np.argmax(all_classes_log_prob, axis=-1) == (
-            all_classes_log_prob.shape[-1] - 1
-        )
+        mean_probs, kl_1, kl_2 = [x.cpu().detach().numpy() for x in out]
+
+        oog_prob = 1 - np.sum(mean_probs, axis=-1, keepdims=True)
+        all_prob = np.concatenate([mean_probs, oog_prob], axis=-1)
+        was_rejected = np.argmax(all_prob, axis=-1) == (all_prob.shape[-1] - 1)
         far = np.mean(was_rejected[~self.is_seen] == False)
         print(f"Found kappa {np.round(kappa,4)} for far {far}")
-        return -np.abs(far - self.target_far)
+        return -np.abs(far - self.target_far) / self.target_far
+
 
 class NNcalibration:
-    def __init__(self, hidden_size, lr, epochs, weight):
+    def __init__(self, hidden_size, lr, epochs, weight, weight_decay):
+        self.device = torch.device("cuda")
         self.perceptron = nn.Sequential(
             nn.Linear(2, hidden_size),
             nn.BatchNorm1d(hidden_size, affine=True),
@@ -71,36 +91,39 @@ class NNcalibration:
             nn.Sigmoid(),
             nn.Flatten(start_dim=0),
         )
+        self.perceptron.to(self.device)
         self.lr = lr
         self.epochs = epochs
         self.weight = weight
-        self.weight_decay = 0.0001
+        self.weight_decay = weight_decay
 
     def train_calibration_parameters(self, kl_1, kl_2, true_pred_label):
         X = torch.tensor(
             np.concatenate([kl_1[None, :], kl_2[None, :]], axis=0).T,
             dtype=torch.float32,
+            device=self.device,
         )
         # save validation normalization parameters
         self.X_mean_val = torch.mean(X, dim=0)
         self.X_std_val = torch.std(X, dim=0)
         X_norm = (X - self.X_mean_val) / self.X_std_val
-        y = torch.tensor(true_pred_label.astype("bool"), dtype=torch.float32)
-        weights = torch.zeros_like(y)
+        y = torch.tensor(
+            true_pred_label.astype("bool"), dtype=torch.float32, device=self.device
+        )
+        weights = torch.zeros_like(y, device=self.device)
         if self.weight is None:
             true_pred_ratio = y.sum() / y.shape[0]
             print(true_pred_ratio.item())
             self.weight = true_pred_ratio.item()
-        weight = torch.tensor(self.weight)
+        weight = torch.tensor(self.weight, device=self.device)
         weights[y == 1.0] = 1 - weight
         weights[y == 0.0] = weight
-
         optimizer = torch.optim.Adam(
             self.perceptron.parameters(), lr=self.lr, weight_decay=self.weight_decay
         )
         loss_fn = nn.BCELoss(weight=weight)
+        self.perceptron.train()
         for iter in range(self.epochs):
-            self.perceptron.train()
             optimizer.zero_grad()
 
             pred = self.perceptron(X_norm)
@@ -108,22 +131,65 @@ class NNcalibration:
 
             loss.backward()
             optimizer.step()
+            # print(f"Iteration {iter}, Loss: {loss.item()}")
 
-            self.perceptron.eval()
-            pred_eval = self.perceptron(X_norm)
-            accuracy = np.mean((pred_eval.detach().numpy() > 0.5) == y.numpy())
-            print(f"Iteration {iter}, Loss: {loss.item()}, accuracy: {accuracy.item()}")
+            # self.perceptron.eval()
+            # pred_eval = self.perceptron(X_norm)
+            # accuracy = np.mean((pred_eval.detach().numpy() > 0.5) == y.numpy())
+            # print(f"Iteration {iter}, Loss: {loss.item()}, accuracy: {accuracy.item()}")
+        # draw probs
+        self.draw_dencity_plot(X_norm.cpu(), y.cpu(), "calib-set")
 
-    def apply_calibration_transform(self, kl_1, kl_2):
+    def apply_calibration_transform(self, kl_1, kl_2, y):
         X = torch.tensor(
             np.concatenate([kl_1[None, :], kl_2[None, :]], axis=0).T,
             dtype=torch.float32,
+            device=self.device,
         )
         X_norm = (X - self.X_mean_val) / self.X_std_val
         self.perceptron.eval()
         predictions_perceptron = self.perceptron(X_norm)
-        unc = -predictions_perceptron.detach().numpy()
+        self.draw_dencity_plot(
+            X_norm.cpu(), torch.tensor(y, dtype=torch.float32), "test-set"
+        )
+        unc = -predictions_perceptron.detach().cpu().numpy()
         return unc
+
+    def draw_dencity_plot(self, X_norm, y, image_name):
+        size = 500
+        kl_1 = torch.linspace(
+            X_norm[:, 0].min(), X_norm[:, 0].max(), size, device=self.device
+        )
+        kl_2 = torch.linspace(
+            X_norm[:, 1].min(), X_norm[:, 1].max(), size, device=self.device
+        )
+        grid_x, grid_y = np.meshgrid(
+            kl_1.cpu().numpy(), kl_2.cpu().numpy(), indexing="ij"
+        )
+        product = torch.cartesian_prod(kl_1, kl_2)
+
+        self.perceptron.eval()
+        predict_prob = self.perceptron(product)
+        z = np.reshape(predict_prob.detach().cpu().numpy(), (size, size)).T
+        z_min, z_max = z.min(), z.max()
+
+        fig, ax = plt.subplots()
+        cs = ax.contourf(grid_x, grid_y, z, cmap=cm.PuBu_r, vmin=z_min, vmax=z_max)
+        ax.axis([grid_x.min(), grid_x.max(), grid_y.min(), grid_y.max()])
+        cbar = fig.colorbar(cs)
+        sns.scatterplot(
+            data={
+                "kl_1": X_norm[:, 0].numpy(),
+                "kl_2": X_norm[:, 1].numpy(),
+                "true_pred_label": y.numpy(),
+            },
+            x="kl_1",
+            y="kl_2",
+            hue="true_pred_label",
+            s=10,
+            alpha=0.5,
+        )
+        plt.savefig(f"/app/outputs/experiments/mc_kl_with_calib/{image_name}.png")
 
 
 class MonteCarloPredictiveProb:
@@ -201,24 +267,24 @@ class MonteCarloPredictiveProb:
         if g_unique_ids is not None and self.gallery_kappa == None:
             # find kappa
             is_seen = np.isin(probe_unique_ids, g_unique_ids)
-            self.gallery_kappa = (
-                minimize(
-                    self.find_kappa_by_far,
-                    493.125 / 100,
-                    (
-                        self,
-                        probe_feats,
-                        probe_unc_scaled,
-                        gallery_feats,
-                        gallery_unc,
-                        self.predict_T,
-                        self.far,
-                        is_seen,
-                    ),
-                    method="Nelder-Mead",
-                )[0]
-                * 100
+            kappa_low = 300
+            kappa_high = 1000
+            max_iter = 10
+            eps = 0.001
+            far_loss_func = FarLossCalc(
+                probe_feats,
+                probe_unc_scaled,
+                gallery_feats,
+                gallery_unc,
+                self.predict_T,
+                self.far,
+                is_seen,
+                self,
             )
+            self.gallery_kappa = golden_selection_search(
+                kappa_high, kappa_low, eps, max_iter, far_loss_func
+            )
+            print(f"Found kappa {np.round(self.gallery_kappa,4)} for far {self.far}")
 
         gallery_unc_scaled = np.ones_like(gallery_unc) * self.gallery_kappa
 
@@ -231,35 +297,89 @@ class MonteCarloPredictiveProb:
         )
         self.mean_probs, self.kl_1, self.kl_2 = [x.cpu().detach().numpy() for x in out]
 
-    @staticmethod
-    def find_kappa_by_far(
-        kappa,
-        self,
-        probe_feats,
-        probe_unc_scaled,
-        gallery_feats,
-        gallery_unc,
-        predict_T,
-        target_far,
-        is_seen,
-    ):
-        kappa = kappa[0]
-        gallery_unc_scaled = np.ones_like(gallery_unc) * kappa * 100
-        out = self.compute_mean_probs_and_kl(
-            probe_feats,
-            probe_unc_scaled,
-            gallery_feats,
-            gallery_unc_scaled,
-            predict_T,
-        )
-        mean_probs, kl_1, kl_2 = [x.cpu().detach().numpy() for x in out]
+        # get calibration set kl
+        if self.gallery_pooled_templates_calib is not None:
+            self.data_uncertainty_calib = self.probe_pooled_templates_calib["g1"][
+                "template_pooled_data_unc"
+            ]
+            self.g_unique_ids_calib = self.gallery_pooled_templates_calib["g1"][
+                "template_subject_ids_sorted"
+            ]
+            self.probe_unique_ids_calib = self.probe_pooled_templates_calib["g1"][
+                "template_subject_ids_sorted"
+            ]
 
-        oog_prob = 1 - np.sum(mean_probs, axis=-1, keepdims=True)
-        all_prob = np.concatenate([mean_probs, oog_prob], axis=-1)
-        was_rejected = np.argmax(all_prob, axis=-1) == (all_prob.shape[-1] - 1)
-        far = np.mean(was_rejected[~is_seen] == False)
-        print(f"Found kappa {np.round(kappa * 100,4)} for far {far}")
-        return np.abs(far - target_far) / target_far
+            is_seen_calib = np.isin(
+                self.probe_unique_ids_calib, self.g_unique_ids_calib
+            )
+            probe_feats_calib = self.probe_pooled_templates_calib["g1"][
+                "template_pooled_features"
+            ]
+            # probe_templates_feature,
+            probe_unc_calib = self.probe_pooled_templates_calib["g1"][
+                "template_pooled_data_unc"
+            ]
+            gallery_feats_calib = self.gallery_pooled_templates_calib["g1"][
+                "template_pooled_features"
+            ]
+            gallery_unc_calib = self.gallery_pooled_templates_calib["g1"][
+                "template_pooled_data_unc"
+            ]
+            kappa_low = 300
+            kappa_high = 1000
+            max_iter = 10
+            eps = 0.001
+            far_loss_func_calib = FarLossCalc(
+                probe_feats_calib,
+                probe_unc_calib,
+                gallery_feats_calib,
+                gallery_unc_calib,
+                self.predict_T,
+                self.far,
+                is_seen_calib,
+                self,
+            )
+            calibratation_set_kappa = golden_selection_search(
+                kappa_high, kappa_low, eps, max_iter, far_loss_func_calib
+            )
+            # calibratation_set_kappa = 714.2059
+            print(
+                f"Found kappa_calib {np.round(calibratation_set_kappa,4)} for far {self.far}"
+            )
+            gallery_unc_scaled_calib = (
+                np.ones_like(gallery_unc_calib) * calibratation_set_kappa
+            )
+
+            out_calib = self.compute_mean_probs_and_kl(
+                probe_feats_calib,
+                probe_unc_calib,
+                gallery_feats_calib,
+                gallery_unc_scaled_calib,
+                self.predict_T,
+            )
+            self.mean_probs_calib, self.kl_1_calib, self.kl_2_calib = [
+                x.cpu().detach().numpy() for x in out_calib
+            ]
+            # calibrate
+            predict_id_calib = np.argmax(self.mean_probs_calib, axis=-1)
+            oog_prob = 1 - np.sum(self.mean_probs_calib, axis=-1, keepdims=True)
+            all_prob = np.concatenate([self.mean_probs_calib, oog_prob], axis=-1)
+            was_rejected_calib = np.argmax(all_prob, axis=-1) == (
+                all_prob.shape[-1] - 1
+            )
+            true_pred_label = np.zeros(self.probe_unique_ids_calib.shape[0])
+            error_calc = FrrFarIdent()
+            error_calc(
+                predict_id_calib,
+                was_rejected_calib,
+                self.g_unique_ids_calib,
+                self.probe_unique_ids_calib,
+            )
+            true_pred_label[error_calc.is_seen] = error_calc.true_accept_true_ident
+            true_pred_label[~error_calc.is_seen] = error_calc.true_reject
+            self.calibration_transform.train_calibration_parameters(
+                self.kl_1_calib, self.kl_2_calib, true_pred_label
+            )
 
     def predict(self):
         predict_probs = self.mean_probs
@@ -290,7 +410,25 @@ class MonteCarloPredictiveProb:
 
     def predict_uncertainty(self):
         if self.pred_uncertainty_type == "entropy":
-            unc = -(self.alpha * self.kl_1 + (1 - self.alpha) * self.kl_2)
+            predict_id = np.argmax(self.mean_probs, axis=-1)
+            oog_prob = 1 - np.sum(self.mean_probs, axis=-1, keepdims=True)
+            all_prob = np.concatenate([self.mean_probs, oog_prob], axis=-1)
+            was_rejected = np.argmax(all_prob, axis=-1) == (all_prob.shape[-1] - 1)
+            true_pred_label = np.zeros(self.probe_unique_ids.shape[0])
+            error_calc = FrrFarIdent()
+            error_calc(
+                predict_id,
+                was_rejected,
+                self.g_unique_ids,
+                self.probe_unique_ids,
+            )
+            true_pred_label[error_calc.is_seen] = error_calc.true_accept_true_ident
+            true_pred_label[~error_calc.is_seen] = error_calc.true_reject
+
+            unc = self.calibration_transform.apply_calibration_transform(
+                self.kl_1, self.kl_2, true_pred_label
+            )
+            # unc = -(self.alpha * self.kl_1 + (1 - self.alpha) * self.kl_2)
             # unc = -self.kl_1
             # unc = -self.kl_2
         return unc
