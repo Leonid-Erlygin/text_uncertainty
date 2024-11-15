@@ -2,11 +2,15 @@ from typing import Any
 
 
 import torch
+import torch.nn as nn
 import numpy as np
 from evaluation.samplers import VonMisesFisher
 from scipy.optimize import fsolve, minimize
 from scipy.special import ive, hyp0f1, loggamma
 from evaluation.metrics import FrrFarIdent
+
+# from evaluation.template_pooling_strategies import PoolingDefault
+from evaluation.open_set_methods.calibration_utils import prepare_calibration_dataset
 from pathlib import Path
 
 
@@ -26,6 +30,102 @@ class GalleryParams(torch.nn.Module):
         )
 
 
+class FarLossCalc:
+    def __init__(
+        self,
+        env,
+    ) -> None:
+        self.env = env
+    def __call__(self, kappa: float) -> float:
+        posterior_prob = PosteriorProb(
+            kappa=kappa,
+            beta=self.beta,
+            class_model=self.class_model,
+            K=self.similarity_matrix.shape[-1],
+        )
+        all_classes_log_prob = posterior_prob.compute_all_class_log_probabilities(
+            self.similarity_matrix, self.T
+        )
+        all_classes_log_prob = torch.mean(all_classes_log_prob, dim=1).numpy()
+        was_rejected = np.argmax(all_classes_log_prob, axis=-1) == (
+            all_classes_log_prob.shape[-1] - 1
+        )
+        far = np.mean(was_rejected[~self.is_seen] == False)
+        print(f"Found kappa {np.round(kappa,4)} for far {far}")
+        return -np.abs(far - self.target_far)
+
+class NNcalibration:
+    def __init__(self, hidden_size, lr, epochs, weight):
+        self.perceptron = nn.Sequential(
+            nn.Linear(2, hidden_size),
+            nn.BatchNorm1d(hidden_size, affine=True),
+            nn.Sigmoid(),
+            nn.Linear(hidden_size, hidden_size),
+            nn.BatchNorm1d(hidden_size, affine=True),
+            nn.Sigmoid(),
+            nn.Linear(hidden_size, hidden_size),
+            nn.Sigmoid(),
+            nn.Linear(hidden_size, hidden_size),
+            nn.BatchNorm1d(hidden_size, affine=True),
+            nn.Linear(hidden_size, 1),
+            nn.Sigmoid(),
+            nn.Flatten(start_dim=0),
+        )
+        self.lr = lr
+        self.epochs = epochs
+        self.weight = weight
+        self.weight_decay = 0.0001
+
+    def train_calibration_parameters(self, kl_1, kl_2, true_pred_label):
+        X = torch.tensor(
+            np.concatenate([kl_1[None, :], kl_2[None, :]], axis=0).T,
+            dtype=torch.float32,
+        )
+        # save validation normalization parameters
+        self.X_mean_val = torch.mean(X, dim=0)
+        self.X_std_val = torch.std(X, dim=0)
+        X_norm = (X - self.X_mean_val) / self.X_std_val
+        y = torch.tensor(true_pred_label.astype("bool"), dtype=torch.float32)
+        weights = torch.zeros_like(y)
+        if self.weight is None:
+            true_pred_ratio = y.sum() / y.shape[0]
+            print(true_pred_ratio.item())
+            self.weight = true_pred_ratio.item()
+        weight = torch.tensor(self.weight)
+        weights[y == 1.0] = 1 - weight
+        weights[y == 0.0] = weight
+
+        optimizer = torch.optim.Adam(
+            self.perceptron.parameters(), lr=self.lr, weight_decay=self.weight_decay
+        )
+        loss_fn = nn.BCELoss(weight=weight)
+        for iter in range(self.epochs):
+            self.perceptron.train()
+            optimizer.zero_grad()
+
+            pred = self.perceptron(X_norm)
+            loss = loss_fn(pred, y)
+
+            loss.backward()
+            optimizer.step()
+
+            self.perceptron.eval()
+            pred_eval = self.perceptron(X_norm)
+            accuracy = np.mean((pred_eval.detach().numpy() > 0.5) == y.numpy())
+            print(f"Iteration {iter}, Loss: {loss.item()}, accuracy: {accuracy.item()}")
+
+    def apply_calibration_transform(self, kl_1, kl_2):
+        X = torch.tensor(
+            np.concatenate([kl_1[None, :], kl_2[None, :]], axis=0).T,
+            dtype=torch.float32,
+        )
+        X_norm = (X - self.X_mean_val) / self.X_std_val
+        self.perceptron.eval()
+        predictions_perceptron = self.perceptron(X_norm)
+        unc = -predictions_perceptron.detach().numpy()
+        return unc
+
+
 class MonteCarloPredictiveProb:
     def __init__(
         self,
@@ -34,6 +134,8 @@ class MonteCarloPredictiveProb:
         emb_unc_model: str,
         beta: float,
         far: float,
+        calibration_set=None,
+        calibration_transform=None,
         gallery_kappa: float = None,
         kappa_scale: float = 1.0,
         kappa_input_scale: float = 1.0,
@@ -71,6 +173,12 @@ class MonteCarloPredictiveProb:
         assert self.pred_uncertainty_type in ["entropy", "max_prob"]
         self.alpha = alpha
         self.log_dir = log_dir
+        if calibration_set is None:
+            return
+        self.gallery_pooled_templates_calib, self.probe_pooled_templates_calib = (
+            prepare_calibration_dataset(calibration_set)
+        )
+        self.calibration_transform = calibration_transform
 
     def setup(
         self,

@@ -3,8 +3,8 @@ from pathlib import Path
 from tqdm import tqdm
 
 from .embeddings import process_embeddings
-from .template_pooling_strategies import AbstractTemplatePooling
 from .test_datasets import FaceRecogntionDataset
+from .embedding_utils import get_template_subsets
 
 
 class Face_Fecognition_test:
@@ -22,8 +22,8 @@ class Face_Fecognition_test:
         recompute_template_pooling: bool,
         recognition_metrics: dict,
         uncertainty_metrics: dict,
-        gallery_template_pooling_strategy: AbstractTemplatePooling,
-        probe_template_pooling_strategy: AbstractTemplatePooling = None,
+        gallery_template_pooling_strategy,
+        probe_template_pooling_strategy=None,
     ):
         self.task_type = task_type
         self.method_name = method_name
@@ -175,7 +175,7 @@ class Face_Fecognition_test:
                     probe_medias,
                     probe_templates_sorted,
                     probe_subject_ids_sorted,
-                ) = self.get_template_subsets(
+                ) = get_template_subsets(
                     self.image_input_feats,
                     self.unc,
                     self.test_dataset.templates,
@@ -215,7 +215,7 @@ class Face_Fecognition_test:
                         gallery_medias,
                         gallery_templates_sorted,
                         gallery_subject_ids_sorted,
-                    ) = self.get_template_subsets(
+                    ) = get_template_subsets(
                         self.image_input_feats,
                         self.unc,
                         self.test_dataset.templates,
@@ -325,51 +325,6 @@ class Face_Fecognition_test:
                     "template_pooled_data_unc": probe_pooled_data[1],
                     "template_subject_ids_sorted": probe_subject_ids_sorted,
                 }
-
-    @staticmethod
-    def get_template_subsets(
-        all_image_emb: np.ndarray,
-        all_image_unc: np.ndarray,
-        all_templates: np.ndarray,
-        all_medias: np.ndarray,
-        subject_ids: np.ndarray,
-        choose_templates: np.ndarray,
-    ):
-        """
-        selects features, uncertainty and medias of templates specified in choose_templates
-        """
-        assert subject_ids.shape[0] == choose_templates.shape[0]
-        choose_templates_sort_id = np.argsort(
-            choose_templates
-        )  # is not stable sorting algorithm
-        choose_templates_sorted = choose_templates[choose_templates_sort_id]
-        subject_ids_sorted = subject_ids[choose_templates_sort_id]
-        unique_templates, indices = np.unique(
-            choose_templates_sorted, return_index=True
-        )
-        unique_subject_ids = subject_ids_sorted[indices]
-
-        templates_emb_subset = []
-        template_uncertainty_subset = []
-        medias_subset = []
-        for uqt in tqdm(unique_templates):
-            ind_t = all_templates == uqt
-            templates_emb_subset.append(all_image_emb[ind_t])
-            template_uncertainty_subset.append(all_image_unc[ind_t])
-            medias_subset.append(all_medias[ind_t])
-        templates_emb_subset = np.concatenate(templates_emb_subset, axis=0)
-        template_uncertainty_subset = np.concatenate(
-            template_uncertainty_subset, axis=0
-        )
-        medias_subset = np.concatenate(medias_subset, axis=0)
-
-        return (
-            templates_emb_subset,
-            template_uncertainty_subset,
-            medias_subset,
-            choose_templates_sorted,
-            unique_subject_ids,
-        )
 
     def predict_and_compute_metrics(self):
         return getattr(self, f"run_model_test_{self.task_type}")()
@@ -500,14 +455,14 @@ class Face_Fecognition_test:
             g1_templates_feature,
             g1_template_unc,
             g1_unique_ids,
-        ) = self.get_template_subsets(
+        ) = get_template_subsets(
             self.test_dataset.g1_templates, self.test_dataset.g1_ids
         )
         (
             probe_templates_feature,
             probe_template_unc,
             probe_unique_ids,
-        ) = self.get_template_subsets(
+        ) = get_template_subsets(
             self.test_dataset.probe_templates, self.test_dataset.probe_ids
         )
         is_seen_g1 = np.isin(probe_unique_ids, g1_unique_ids)
@@ -535,7 +490,7 @@ class Face_Fecognition_test:
                 g2_templates_feature,
                 g2_template_unc,
                 g2_unique_ids,
-            ) = self.get_template_subsets(
+            ) = get_template_subsets(
                 self.test_dataset.g2_templates, self.test_dataset.g2_ids
             )
             print("g2_templates_feature:", g2_templates_feature.shape)  # (1759, 512)
