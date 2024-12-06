@@ -11,6 +11,7 @@ from scipy.optimize import fsolve, minimize
 from scipy.special import ive, hyp0f1, loggamma
 from evaluation.metrics import FrrFarIdent
 from utils.golden_section import golden_selection_search
+import importlib
 
 # from evaluation.template_pooling_strategies import PoolingDefault
 from evaluation.open_set_methods.calibration_utils import prepare_calibration_dataset
@@ -74,7 +75,16 @@ class FarLossCalc:
 
 
 class NNcalibration:
-    def __init__(self, hidden_size, lr, epochs, weight, weight_decay):
+    def __init__(
+        self,
+        hidden_size,
+        lr,
+        epochs,
+        weight,
+        weight_decay,
+        scheduler_params,
+        random_subset_size=None,
+    ):
         self.device = torch.device("cuda")
         self.perceptron = nn.Sequential(
             nn.Linear(2, hidden_size),
@@ -96,6 +106,8 @@ class NNcalibration:
         self.epochs = epochs
         self.weight = weight
         self.weight_decay = weight_decay
+        self.scheduler_params = scheduler_params
+        self.random_subset_size = random_subset_size
 
     def train_calibration_parameters(self, kl_1, kl_2, true_pred_label):
         X = torch.tensor(
@@ -118,20 +130,50 @@ class NNcalibration:
         weight = torch.tensor(self.weight, device=self.device)
         weights[y == 1.0] = 1 - weight
         weights[y == 0.0] = weight
+        scheduler_params = {
+            "scheduler": "OneCycleLR",
+            "params": {
+                "max_lr": self.scheduler_params.max_lr,
+                "steps_per_epoch": self.scheduler_params.steps_per_epoch,
+                "epochs": self.epochs,
+                "div_factor": self.scheduler_params.div_factor,
+                "final_div_factor": self.scheduler_params.final_div_factor,
+            },
+            "interval": "epoch",
+            "frequency": 1,
+        }
         optimizer = torch.optim.Adam(
             self.perceptron.parameters(), lr=self.lr, weight_decay=self.weight_decay
         )
+        scheduler = getattr(
+            importlib.import_module("torch.optim.lr_scheduler"),
+            scheduler_params["scheduler"],
+        )(optimizer, **scheduler_params["params"])
+
         loss_fn = nn.BCELoss(weight=weight)
         self.perceptron.train()
         for iter in range(self.epochs):
             optimizer.zero_grad()
 
-            pred = self.perceptron(X_norm)
-            loss = loss_fn(pred, y)
+            # sample train ds subset
+            if self.random_subset_size is not None:
+                indices = torch.randperm(X_norm.shape[0])[
+                    : int(X_norm.shape[0] * self.random_subset_size)
+                ]
+                X_norm_subset = X_norm[indices]
+                y_subset = y[indices]
+                pred = self.perceptron(X_norm_subset)
+                loss = loss_fn(pred, y_subset)
+            else:
+                pred = self.perceptron(X_norm)
+                loss = loss_fn(pred, y)
 
             loss.backward()
             optimizer.step()
-            print(f"Iteration {iter}, Loss: {loss.item()}")
+            scheduler.step()
+            print(
+                f"Iteration {iter}, Loss: {loss.item()}, lr: {optimizer.param_groups[0]['lr']}"
+            )
 
             # self.perceptron.eval()
             # pred_eval = self.perceptron(X_norm)
@@ -201,6 +243,7 @@ class MonteCarloPredictiveProb:
         beta: float,
         far: float,
         calibration_set=None,
+        calibration_embs_name=None,
         calibration_transform=None,
         gallery_kappa: float = None,
         kappa_scale: float = 1.0,
@@ -242,7 +285,7 @@ class MonteCarloPredictiveProb:
         if calibration_set is None:
             return
         self.gallery_pooled_templates_calib, self.probe_pooled_templates_calib = (
-            prepare_calibration_dataset(calibration_set)
+            prepare_calibration_dataset(calibration_set, calibration_embs_name)
         )
         self.calibration_transform = calibration_transform
 

@@ -67,6 +67,7 @@ class PosteriorProbability(OpenSetMethod):
         calibrate_by_false_reject: bool = False,
         calibrate_gallery_unc: str = None,
         calibration_set: FaceRecogntionDataset = None,
+        calibration_embs_name=None,
         log_dir=None,
     ) -> None:
         super().__init__()
@@ -90,7 +91,7 @@ class PosteriorProbability(OpenSetMethod):
         if calibration_set is None:
             return
         self.gallery_pooled_templates_calib, self.probe_pooled_templates_calib = (
-            prepare_calibration_dataset(calibration_set)
+            prepare_calibration_dataset(calibration_set, calibration_embs_name)
         )
 
     def setup(

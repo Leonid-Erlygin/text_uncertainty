@@ -4,11 +4,11 @@ import numpy as np
 from evaluation.embedding_utils import get_template_subsets
 
 
-def prepare_calibration_dataset(calibration_set):
+def prepare_calibration_dataset(calibration_set, embs_name):
     # prepare calibration set
     embeddings_path = (
         Path(calibration_set.dataset_path)
-        / f"embeddings/scf_embs_{calibration_set.dataset_name}.npz"
+        / f"embeddings/{embs_name}_embs_{calibration_set.dataset_name}.npz"
     )
     aa = np.load(embeddings_path)
 
