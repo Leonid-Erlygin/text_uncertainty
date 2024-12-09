@@ -20,6 +20,7 @@ class SimilarityBasedPrediction(OpenSetMethod):
         T_data_unc: float = None,
         far: float = None,
         calibration_set: bool = None,
+        embs_name=None,
         beta_calib: bool = True,
         oracle_predictions: bool = False,
     ) -> None:
@@ -38,7 +39,7 @@ class SimilarityBasedPrediction(OpenSetMethod):
         self.calibrate_by_false_reject = False
         self.beta_calib = beta_calib
         self.gallery_pooled_templates_calib, self.probe_pooled_templates_calib = (
-            prepare_calibration_dataset(calibration_set)
+            prepare_calibration_dataset(calibration_set, embs_name)
         )
 
     def setup(
