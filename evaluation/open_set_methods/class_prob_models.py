@@ -83,7 +83,9 @@ class NNcalibration:
         weight,
         weight_decay,
         scheduler_params,
+        normalize_kl_by_test=False,
         random_subset_size=None,
+        log_dir=None,
     ):
         self.device = torch.device("cuda")
         self.perceptron = nn.Sequential(
@@ -108,8 +110,10 @@ class NNcalibration:
         self.weight_decay = weight_decay
         self.scheduler_params = scheduler_params
         self.random_subset_size = random_subset_size
+        self.log_dir = log_dir
+        self.normalize_kl_by_test = normalize_kl_by_test
 
-    def train_calibration_parameters(self, kl_1, kl_2, true_pred_label):
+    def train_calibration_parameters(self, kl_1, kl_2, true_pred_label, save_name):
         X = torch.tensor(
             np.concatenate([kl_1[None, :], kl_2[None, :]], axis=0).T,
             dtype=torch.float32,
@@ -122,14 +126,15 @@ class NNcalibration:
         y = torch.tensor(
             true_pred_label.astype("bool"), dtype=torch.float32, device=self.device
         )
-        weights = torch.zeros_like(y, device=self.device)
+
         if self.weight is None:
             true_pred_ratio = y.sum() / y.shape[0]
             print(true_pred_ratio.item())
             self.weight = true_pred_ratio.item()
-        weight = torch.tensor(self.weight, device=self.device)
-        weights[y == 1.0] = 1 - weight
-        weights[y == 0.0] = weight
+        # weight = torch.tensor(self.weight, device=self.device)
+        weight = torch.nn.Parameter(
+            torch.tensor(self.weight, device=self.device), requires_grad=True
+        )
         scheduler_params = {
             "scheduler": "OneCycleLR",
             "params": {
@@ -142,19 +147,35 @@ class NNcalibration:
             "interval": "epoch",
             "frequency": 1,
         }
+
+        # loss_fn = nn.BCELoss(weight=weights)
+        loss_fn = nn.BCELoss(reduce=False)
+        self.perceptron.train()
+
+        if self.random_subset_size is not None:
+            weights = torch.zeros(
+                int(X_norm.shape[0] * self.random_subset_size), device=self.device
+            )
+        else:
+            weights = torch.zeros_like(y, device=self.device)
+            weights[y == 1.0] = 1 - weight
+            weights[y == 0.0] = weight
+            weights = torch.nn.Parameter(weights, requires_grad=True)
+
         optimizer = torch.optim.Adam(
-            self.perceptron.parameters(), lr=self.lr, weight_decay=self.weight_decay
+            [*self.perceptron.parameters()] + [weight],
+            lr=self.lr,
+            weight_decay=self.weight_decay,
         )
         scheduler = getattr(
             importlib.import_module("torch.optim.lr_scheduler"),
             scheduler_params["scheduler"],
         )(optimizer, **scheduler_params["params"])
 
-        loss_fn = nn.BCELoss(weight=weight)
-        self.perceptron.train()
+        true_index = y == 1.0
         for iter in range(self.epochs):
+            self.perceptron.train()
             optimizer.zero_grad()
-
             # sample train ds subset
             if self.random_subset_size is not None:
                 indices = torch.randperm(X_norm.shape[0])[
@@ -162,37 +183,53 @@ class NNcalibration:
                 ]
                 X_norm_subset = X_norm[indices]
                 y_subset = y[indices]
+                weights[y_subset == 1.0] = 1 - weight
+                weights[y_subset == 0.0] = weight
                 pred = self.perceptron(X_norm_subset)
-                loss = loss_fn(pred, y_subset)
+                loss = (loss_fn(pred, y_subset) * weights).mean()
             else:
                 pred = self.perceptron(X_norm)
-                loss = loss_fn(pred, y)
+                loss_element_wise = loss_fn(pred, y)
+                loss = loss_element_wise[true_index].mean() * (
+                    1 - torch.sigmoid(weight)
+                ) + loss_element_wise[~true_index].mean() * torch.sigmoid(weight)
+                # loss = (loss_fn(pred, y)* weights).mean()
 
             loss.backward()
             optimizer.step()
             scheduler.step()
-            print(
-                f"Iteration {iter}, Loss: {loss.item()}, lr: {optimizer.param_groups[0]['lr']}"
+            # print(
+            #     f"Iteration {iter}, Loss: {loss.item()}, lr: {optimizer.param_groups[0]['lr']}"
+            # )
+
+            self.perceptron.eval()
+            pred_eval = self.perceptron(X_norm)
+            accuracy = np.mean(
+                (pred_eval.detach().cpu().numpy() > 0.5) == y.cpu().numpy()
             )
-
-            # self.perceptron.eval()
-            # pred_eval = self.perceptron(X_norm)
-            # accuracy = np.mean((pred_eval.detach().numpy() > 0.5) == y.numpy())
-            # print(f"Iteration {iter}, Loss: {loss.item()}, accuracy: {accuracy.item()}")
+            print(
+                f"Iteration {iter}, Loss: {loss.item()}, accuracy: {accuracy.item()}, lr: {optimizer.param_groups[0]['lr']}"
+            )
+            print(torch.sigmoid(weight).item())
         # draw probs
-        self.draw_dencity_plot(X_norm.cpu(), y.cpu(), "calib-set")
+        self.draw_dencity_plot(X_norm.cpu(), y.cpu(), save_name)
 
-    def apply_calibration_transform(self, kl_1, kl_2, y):
+    def apply_calibration_transform(self, kl_1, kl_2, y, save_name):
         X = torch.tensor(
             np.concatenate([kl_1[None, :], kl_2[None, :]], axis=0).T,
             dtype=torch.float32,
             device=self.device,
         )
-        X_norm = (X - self.X_mean_val) / self.X_std_val
+        if self.normalize_kl_by_test:
+            self.X_mean_test = torch.mean(X, dim=0)
+            self.X_std_test = torch.std(X, dim=0)
+            X_norm = (X - self.X_mean_test) / self.X_std_test
+        else:
+            X_norm = (X - self.X_mean_val) / self.X_std_val
         self.perceptron.eval()
         predictions_perceptron = self.perceptron(X_norm)
         self.draw_dencity_plot(
-            X_norm.cpu(), torch.tensor(y, dtype=torch.float32), "test-set"
+            X_norm.cpu(), torch.tensor(y, dtype=torch.float32), save_name
         )
         unc = -predictions_perceptron.detach().cpu().numpy()
         return unc
@@ -231,7 +268,9 @@ class NNcalibration:
             s=10,
             alpha=0.5,
         )
-        plt.savefig(f"/app/outputs/experiments/mc_kl_with_calib/{image_name}.png")
+        log_dir = Path(self.log_dir) / "calibration_images"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        plt.savefig(log_dir / f"{image_name}.png")
 
 
 class MonteCarloPredictiveProb:
@@ -421,7 +460,10 @@ class MonteCarloPredictiveProb:
             true_pred_label[error_calc.is_seen] = error_calc.true_accept_true_ident
             true_pred_label[~error_calc.is_seen] = error_calc.true_reject
             self.calibration_transform.train_calibration_parameters(
-                self.kl_1_calib, self.kl_2_calib, true_pred_label
+                self.kl_1_calib,
+                self.kl_2_calib,
+                true_pred_label,
+                f"{self.far}_calibration-set",
             )
 
     def predict(self):
@@ -469,7 +511,7 @@ class MonteCarloPredictiveProb:
             true_pred_label[~error_calc.is_seen] = error_calc.true_reject
 
             unc = self.calibration_transform.apply_calibration_transform(
-                self.kl_1, self.kl_2, true_pred_label
+                self.kl_1, self.kl_2, true_pred_label, f"{self.far}_test-set"
             )
             # unc = -(self.alpha * self.kl_1 + (1 - self.alpha) * self.kl_2)
             # unc = -self.kl_1
