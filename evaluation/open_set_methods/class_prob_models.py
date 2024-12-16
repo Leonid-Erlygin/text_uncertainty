@@ -83,6 +83,7 @@ class NNcalibration:
         weight,
         weight_decay,
         scheduler_params,
+        train_weight=True,
         normalize_kl_by_test=False,
         random_subset_size=None,
         log_dir=None,
@@ -112,6 +113,7 @@ class NNcalibration:
         self.random_subset_size = random_subset_size
         self.log_dir = log_dir
         self.normalize_kl_by_test = normalize_kl_by_test
+        self.train_weight = train_weight
 
     def train_calibration_parameters(self, kl_1, kl_2, true_pred_label, save_name):
         X = torch.tensor(
@@ -132,9 +134,13 @@ class NNcalibration:
             print(true_pred_ratio.item())
             self.weight = true_pred_ratio.item()
         # weight = torch.tensor(self.weight, device=self.device)
-        weight = torch.nn.Parameter(
-            torch.tensor(self.weight, device=self.device), requires_grad=True
-        )
+        if self.train_weight:
+            weight = torch.nn.Parameter(
+                torch.tensor(self.weight, device=self.device), requires_grad=True
+            )
+        else:
+            weight = torch.tensor(self.weight, device=self.device)
+
         scheduler_params = {
             "scheduler": "OneCycleLR",
             "params": {
@@ -157,16 +163,20 @@ class NNcalibration:
                 int(X_norm.shape[0] * self.random_subset_size), device=self.device
             )
         else:
-            weights = torch.zeros_like(y, device=self.device)
-            weights[y == 1.0] = 1 - weight
-            weights[y == 0.0] = weight
-            weights = torch.nn.Parameter(weights, requires_grad=True)
+            pass
 
-        optimizer = torch.optim.Adam(
-            [*self.perceptron.parameters()] + [weight],
-            lr=self.lr,
-            weight_decay=self.weight_decay,
-        )
+        if self.train_weight:
+            optimizer = torch.optim.Adam(
+                [*self.perceptron.parameters()] + [weight],
+                lr=self.lr,
+                weight_decay=self.weight_decay,
+            )
+        else:
+            optimizer = torch.optim.Adam(
+                [*self.perceptron.parameters()],
+                lr=self.lr,
+                weight_decay=self.weight_decay,
+            )
         scheduler = getattr(
             importlib.import_module("torch.optim.lr_scheduler"),
             scheduler_params["scheduler"],
