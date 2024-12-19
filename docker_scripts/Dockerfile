@@ -57,3 +57,4 @@ RUN curl -sLo ~/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-py39
  && conda env update -n base -f /app/environment.yml \
  && rm /app/environment.yml \
  && conda clean -ya
+ 
