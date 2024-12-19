@@ -226,6 +226,7 @@ class ErrorDistribution:
         probe_unique_ids: np.ndarray,
         predicted_unc: np.ndarray = None,
         method_name: str = None,
+        far: float = None,
     ) -> dict:
         is_seen = np.isin(probe_unique_ids, g_unique_ids)
 
@@ -262,10 +263,7 @@ class ErrorDistribution:
             unc += 1.0000000001
             log_scale = True
         elif "baseline" in method_name:
-            # unc += 1.0000000001
-            # unc = np.exp(np.exp(unc))
             log_scale = False
-        # unc = np.log(unc)
         error_kind = np.array(
             [
                 ["false accept"] * len(predicted_unc[~is_seen][false_accept]),
@@ -280,7 +278,9 @@ class ErrorDistribution:
             dtype=object,
         )
         error_kind = np.concatenate(error_kind[self.value_types])
-        out_name = Path(self.plot_save_dir) / (method_name + ".png")
+        our_dir = Path(self.plot_save_dir) / "uncertainty_distribution" / f"far_{far}"
+        our_dir.mkdir(exist_ok=True, parents=True)
+        out_path = our_dir / (method_name + ".png")
         data = pd.DataFrame({"unc": list(unc), "Error Kind": error_kind})
         sns.displot(
             data,
@@ -291,7 +291,7 @@ class ErrorDistribution:
             common_norm=False,
         )
         plt.xlabel(f"{method_name} score")
-        plt.savefig(out_name, dpi=300)
+        plt.savefig(out_path, dpi=300)
         return {}
 
 
@@ -304,6 +304,7 @@ class DirFar:
         probe_unique_ids: np.ndarray,
         predicted_unc: np.ndarray = None,
         method_name: str = None,
+        far: float = None,
     ) -> dict:
         is_seen = np.isin(probe_unique_ids, g_unique_ids)
         similar_gallery_class = g_unique_ids[predicted_id[is_seen]]

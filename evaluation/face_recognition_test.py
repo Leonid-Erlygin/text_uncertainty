@@ -372,7 +372,8 @@ class Face_Fecognition_test:
                             "template_subject_ids_sorted"
                         ],
                         predicted_unc=predicted_unc,
-                        method_name=self.pretty_name,  # .split('$')[0],
+                        method_name=self.pretty_name,
+                        far=self.recognition_method.far,
                     )
                 )
 

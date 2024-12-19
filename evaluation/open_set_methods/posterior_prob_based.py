@@ -307,7 +307,7 @@ class PosteriorProbability(OpenSetMethod):
             [a, b, c],
             lr=0.01,
             iter_num=500,
-            verbose=True,
+            verbose=False,
         )
         conf_gallery = prob_compute(
             torch.tensor(conf_gallery, dtype=torch.float32),
@@ -406,7 +406,7 @@ class PosteriorProbability(OpenSetMethod):
                 self.data_uncertainty,
                 data_uncertainty_calib,
                 true_pred_label,
-                verbose=True,
+                verbose=False,
             )
         else:
             data_conf = self.data_uncertainty
@@ -436,7 +436,7 @@ class PosteriorProbability(OpenSetMethod):
                     conf_gallery,
                     conf_gallery_calib,
                     true_pred_label,
-                    verbose=True,
+                    verbose=False,
                 )
             else:
                 conf_gallery_calib = np.exp(

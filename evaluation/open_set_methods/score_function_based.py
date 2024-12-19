@@ -180,7 +180,7 @@ class SimilarityBasedPrediction(OpenSetMethod):
                         -unc,
                         -unc_calib,
                         true_pred_label,
-                        verbose=True,
+                        verbose=False,
                         scale_factor=1,
                     )
         else:
