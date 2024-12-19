@@ -24,7 +24,7 @@ bash build.sh
 ```
 image building process takes about 10 min, and it will install all the dependecies.
 
-If you want to create development container please run following commands:
+(optional) If you want to create development container please run following commands:
 ```bash
 cd docker_scripts
 bash launch_container.sh
@@ -38,6 +38,8 @@ cd scripts
 bash evaluate_filtering.sh
 ```
 first run might take a while...  
-All the plots will be stored in directory `outputs/experiments/filtering_plots`
+All the plots will be stored in directory `outputs/experiments/filtering_plots`  
+In this example plots from the paper will be stored at `outputs/experiments/filtering_plots/open_set_identification/IJBC/filter_plots/0.05`  
+because we test our method on dataset IJBC at FAR $0.05$, which is specified in config
 
 Evaluation script will be run with config `configs/uncertainty_benchmark/evaluate_filtering.yaml`  
