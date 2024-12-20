@@ -315,7 +315,7 @@ class MonteCarloPredictiveProb:
             # unc = -(self.alpha * self.kl_1 + (1 - self.alpha) * self.kl_2)
             # unc = -self.kl_1
             # unc = -self.kl_2
-        return unc
+        return -(-unc + 2) * 0.5
 
     def compute_mean_probs_and_kl(
         self,

@@ -288,7 +288,20 @@ class Face_Fecognition_test:
                             probe_unique_ids=self.test_dataset.probe_ids,
                         )
                         predicted_id, was_rejected = self.recognition_method.predict()
+
                         predicted_unc = self.recognition_method.predict_uncertainty()
+                        for metric in self.recognition_metrics[self.task_type]:
+                            metric(
+                                predicted_id=predicted_id,
+                                was_rejected=was_rejected,
+                                g_unique_ids=self.gallery_pooled_templates[
+                                    gallery_name
+                                ]["template_subject_ids_sorted"],
+                                probe_unique_ids=self.test_dataset.probe_ids,
+                                predicted_unc=predicted_unc,
+                                method_name=self.pretty_name + "_bf-pool",
+                                far=self.recognition_method.far,
+                            )
                         probe_pooled_data = self.probe_template_pooling_strategy(
                             probe_features,
                             -predicted_unc,
