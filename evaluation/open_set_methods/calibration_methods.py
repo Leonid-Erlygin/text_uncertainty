@@ -74,6 +74,42 @@ class BoostingCalibration:
         plt.savefig(log_dir / f"{image_name}.png")
 
 
+class IDResBlock(nn.Module):
+    def __init__(self, input_size, hidden_size: int, use_bn=True):
+        super().__init__()
+        self.bn0 = nn.BatchNorm1d(input_size, affine=True)
+
+        self.mlp1 = nn.Linear(input_size, hidden_size)
+        self.bn1 = nn.BatchNorm1d(hidden_size, affine=True)
+        self.activ = nn.Sigmoid()
+
+        self.mlp2 = nn.Linear(hidden_size, hidden_size)
+        self.bn2 = nn.BatchNorm1d(hidden_size, affine=True)
+
+        self.mlp3 = nn.Linear(hidden_size, hidden_size)
+        self.bn3 = nn.BatchNorm1d(hidden_size, affine=True)
+
+        self.use_bn = use_bn
+
+    def forward(self, x):
+        if self.use_bn:
+            x = self.bn0(x)
+        x = self.mlp1(x)
+        if self.use_bn:
+            x = self.bn1(x)
+        x = self.activ(x)
+        identity = x
+        x = self.mlp2(x)
+        if self.use_bn:
+            x = self.bn2(x)
+        x = self.activ(x)
+        x = self.mlp3(x)
+        if self.use_bn:
+            x = self.bn3(x)
+        out = x + identity
+        return out
+
+
 class NNcalibration:
     def __init__(
         self,
@@ -89,24 +125,24 @@ class NNcalibration:
         log_dir=None,
     ):
         self.device = torch.device("cuda")
-        num_layers = 6
-        base_dim = 8
-        layers = [nn.Linear(2, base_dim)]
-        prev_dim = base_dim
-
+        num_layers = 3
+        base_dim = hidden_size
+        layers = []
+        prev_dim = 2
+        use_bn = False
         for i in range(num_layers):
-            new_dim = base_dim * (i + 2) * 16
+            new_dim = base_dim * (i + 2) * 4
             layers.extend(
                 [
-                    nn.BatchNorm1d(prev_dim, affine=True),
-                    nn.Sigmoid(),
-                    nn.Linear(prev_dim, new_dim),
+                    IDResBlock(prev_dim, new_dim, use_bn),
                 ]
             )
             prev_dim = new_dim
+
+        if use_bn:
+            layers.append(nn.BatchNorm1d(prev_dim, affine=True))
         layers.extend(
             [
-                nn.BatchNorm1d(prev_dim, affine=True),
                 nn.Linear(prev_dim, 1),
                 nn.Sigmoid(),
                 nn.Flatten(start_dim=0),
@@ -284,7 +320,7 @@ class NNcalibration:
             x="kl_1",
             y="kl_2",
             hue="true_pred_label",
-            s=5,
+            s=2,
             alpha=0.5,
         )
         log_dir = Path(self.log_dir) / "calibration_images"
