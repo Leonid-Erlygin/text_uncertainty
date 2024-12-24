@@ -1,7 +1,7 @@
 docker run \
- --shm-size=16g \
- --memory=80g \
- --cpus=40 \
+ --shm-size=4g \
+ --memory=16g \
+ --cpus=16 \
  --user ${UID}:${UID} \
  --name ${USER}_$(basename $(dirname "$PWD"))_filter_plots \
  --rm \
