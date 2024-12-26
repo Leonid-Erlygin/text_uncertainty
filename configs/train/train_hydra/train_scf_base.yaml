@@ -21,7 +21,7 @@ trainer:
   devices: 1
   num_sanity_val_steps: 0
   log_every_n_steps: 3
-  default_root_dir: outputs/scf_train
+  default_root_dir: outputs/scf_train_demo
   val_check_interval: 0.1
   enable_checkpointing: true
 model:

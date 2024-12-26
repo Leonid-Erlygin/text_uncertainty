@@ -38,20 +38,25 @@
 
 Для создания графиков фильтрации тестовых примеров следуйте следующим шагам:
 
-1. **Запуск скрипта оценки**:
-   - Перейдите в директорию `scripts` и запустите скрипт оценки:
+1. **Запуск скрипта построение оценок неопределённости и подсчёта метрик качества**:
+   - Перейдите в директорию `scripts` и запустите скрипт оценки неопределённости на наборах данных IJBB и IJBC:
      ```bash
      cd scripts
      bash evaluate_filtering.sh
+     ```
+   - Перейдите в директорию `scripts` и запустите скрипт оценки неопределённости на наборе данных Whale:
+     ```bash
+     cd scripts
+     bash evaluate_filtering_whale.sh
      ```
    - Первый запуск может занять некоторое время.
 
 2. **Хранение вывода**:
    - Все графики будут сохранены в директории `outputs/experiments/filtering_plots`.
-   - Конкретно, графики из статьи будут сохранены в `outputs/experiments/filtering_plots/open_set_identification/IJBC/filter_plots/0.05`, потому что метод тестируется на наборе данных IJBC с уровнем ложных срабатываний (FAR) 0.05, как указано в конфигурации.
+   - Например, графики для набора данных IJBC будут сохранены в `outputs/experiments/filtering_plots/open_set_identification/IJBC/filter_plots/0.1`, потому что метод тестируется на наборах данных IJBC с уровнем ложных срабатываний (FAR) 0.1, как указано в конфигурации.
 
 3. **Конфигурация**:
-   - Скрипт оценки будет запущен с конфигурационным файлом `configs/uncertainty_benchmark/evaluate_filtering.yaml`.
+   - Скрипты оценок неопределённости и подсчёта метрик качества будут запущены с конфигурационными файлами `configs/uncertainty_benchmark/evaluate_filtering.yaml` и `configs/uncertainty_benchmark/evaluate_filtering_whale.yaml`.
 
 ### Дополнительные замечания
 
