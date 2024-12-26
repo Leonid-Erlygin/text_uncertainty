@@ -1,45 +1,59 @@
 # Gallery-Aware Uncertainty Estimation For Open-Set Face Recognition
 
-### Project Configuration
-System Requirements:
-- Docker version 25.0.3
-- CUDA Version: 12.2
+### Системные требования
+- **Версия Docker**: 25.0.3
+- **Версия CUDA**: 12.2
 
-Repository preparation steps:
-1. Download datasets via link https://disk.yandex.ru/d/dtX-48519lKt-A
-2. Extract `datasets` folder and place it inside project directory at root level:
-```
-face_ue
-│   README.md
-│      
-└───datasets
-│
-│   ...
-```
+### Шаги подготовки репозитория
 
-To configure project dependecies please build your docker image using following commands:
-```bash
-cd docker_scripts
-bash build.sh
-```
-image building process takes about 10 min, and it will install all the dependecies.
+1. **Скачивание наборов данных**:
+   - Используйте предоставленную ссылку для скачивания наборов данных: [Ссылка на Яндекс Диск](https://disk.yandex.ru/d/dtX-48519lKt-A)
+   - Извлеките папку `datasets` и поместите её в корневую директорию проекта. Структура должна выглядеть следующим образом:
+     ```
+     face_ue
+     │   README.md
+     │
+     └───datasets
+     │
+     │   ...
+     ```
 
-(optional) If you want to create development container please run following commands:
-```bash
-cd docker_scripts
-bash launch_container.sh
-```
-afterwards you could attach to container using vscode
+2. **Сборка Docker-образа**:
+   - Перейдите в директорию `docker_scripts` и запустите скрипт сборки:
+     ```bash
+     cd docker_scripts
+     bash build.sh
+     ```
+   - Процесс сборки образа занимает примерно 10 минут и установит все необходимые зависимости.
 
-### Method evaluation
-In order to create rejection plots please run following commands:
-```bash
-cd scripts
-bash evaluate_filtering.sh
-```
-first run might take a while...  
-All the plots will be stored in directory `outputs/experiments/filtering_plots`  
-In this example plots from the paper will be stored at `outputs/experiments/filtering_plots/open_set_identification/IJBC/filter_plots/0.05`  
-because we test our method on dataset IJBC at FAR $0.05$, which is specified in config
+3. **(Опционально) Создание контейнера для разработки**:
+   - Если вы хотите создать контейнер для разработки, выполните следующие команды:
+     ```bash
+     cd docker_scripts
+     bash launch_container.sh
+     ```
+   - После выполнения вышеуказанных команд вы можете подключиться к контейнеру с помощью Visual Studio Code (VSCode).
 
-Evaluation script will be run with config `configs/uncertainty_benchmark/evaluate_filtering.yaml`  
+### Оценка метода
+
+Для создания графиков фильтрации тестовых примеров следуйте следующим шагам:
+
+1. **Запуск скрипта оценки**:
+   - Перейдите в директорию `scripts` и запустите скрипт оценки:
+     ```bash
+     cd scripts
+     bash evaluate_filtering.sh
+     ```
+   - Первый запуск может занять некоторое время.
+
+2. **Хранение вывода**:
+   - Все графики будут сохранены в директории `outputs/experiments/filtering_plots`.
+   - Конкретно, графики из статьи будут сохранены в `outputs/experiments/filtering_plots/open_set_identification/IJBC/filter_plots/0.05`, потому что метод тестируется на наборе данных IJBC с уровнем ложных срабатываний (FAR) 0.05, как указано в конфигурации.
+
+3. **Конфигурация**:
+   - Скрипт оценки будет запущен с конфигурационным файлом `configs/uncertainty_benchmark/evaluate_filtering.yaml`.
+
+### Дополнительные замечания
+
+- Убедитесь, что Docker и CUDA правильно установлены и настроены на вашей системе.
+- Убедитесь, что у вас достаточно места на диске и памяти для обработки набора данных и Docker-образа.
