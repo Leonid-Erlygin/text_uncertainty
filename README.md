@@ -1,4 +1,4 @@
-# Gallery-Aware Uncertainty Estimation For Open-Set Face Recognition
+# Оценка неопределённости предсказаний в задаче открытого распознавания лиц
 
 ### Системные требования
 - **Версия Docker**: 25.0.3
