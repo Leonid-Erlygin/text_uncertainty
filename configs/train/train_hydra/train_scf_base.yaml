@@ -5,6 +5,7 @@ trainer:
   logger:
     _target_: pytorch_lightning.loggers.WandbLogger
     project: "SCF-train"
+    name: "Test Base"
   callbacks:
   - _target_: pytorch_lightning.callbacks.ModelCheckpoint 
     every_n_epochs: 1
