@@ -396,15 +396,12 @@ class MonteCarloPredictiveProb:
         kl_1 = torch.sum(
             mean_gallery_probs * torch.log(mean_gallery_probs / p_c), axis=1
         )
-        # kl_1 = torch.sum(
-        #     mean_gallery_probs * torch.log(mean_gallery_probs), axis=1
-        # )
 
         # compute kl_2
-        # 1. compute log p(z_i|x)
         if self.emb_unc_model == "vMF":
             # TODO: sample more zs
             d = d.item()
+            # p(z|x) dencity
             log_iv = np.log(ive(d / 2 - 1, kappa[:, 0], dtype=np.float64)) + kappa[:, 0]
             log_normalizer = (
                 (d / 2 - 1) * np.log(kappa[:, 0]) - (d / 2) * np.log(2 * np.pi) - log_iv
@@ -418,22 +415,23 @@ class MonteCarloPredictiveProb:
 
             sim_mult_kappa = torch.multiply(
                 similarities,
-                kappa[:, np.newaxis],  # * (1 / T),
+                kappa[:, np.newaxis],
                 out=similarities,
             )
             log_p_z_given_x = torch.add(
-                log_normalizer[:, np.newaxis],  # * (1 / T),
+                log_normalizer[:, np.newaxis],
                 sim_mult_kappa,
                 out=similarities,
             )
             kl_2 = (self.beta) ** (1 / T) * torch.mean(
-                (log_p_z_given_x - log_z_prob) / (self.beta + logit_sum),
+                (
+                    (1 / T - 1) * (np.log(self.beta) + log_uniform_dencity)
+                    + log_p_z_given_x
+                    - log_z_prob
+                )
+                / (self.beta ** (1 / T) + logit_sum),
                 axis=1,
             )
-            # kl_2 = self.beta * torch.mean( # default scf
-            #     (log_p_z_given_x),
-            #     axis=1,
-            # )
         else:
             raise ValueError
         return mean_gallery_probs, kl_1, kl_2
