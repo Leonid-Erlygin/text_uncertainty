@@ -115,6 +115,7 @@ class NNcalibration:
         self,
         hidden_size,
         num_layers,
+        use_bn,
         lr,
         epochs,
         weight,
@@ -130,7 +131,7 @@ class NNcalibration:
         base_dim = hidden_size
         layers = []
         prev_dim = 2
-        use_bn = True
+        use_bn = use_bn
         for i in range(num_layers):
             new_dim = base_dim * (i + 2) * 4
             layers.extend(
