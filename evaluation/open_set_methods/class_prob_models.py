@@ -261,7 +261,7 @@ class MonteCarloPredictiveProb:
             self.calibration_transform.train_calibration_parameters(
                 self.kl_1_calib,
                 self.kl_2_calib,
-                true_pred_label,
+                error_calc,
                 f"{self.far}_calibration-set",
             )
 
@@ -310,12 +310,9 @@ class MonteCarloPredictiveProb:
             true_pred_label[~error_calc.is_seen] = error_calc.true_reject
 
             unc = self.calibration_transform.apply_calibration_transform(
-                self.kl_1, self.kl_2, true_pred_label, f"{self.far}_test-set"
+                self.kl_1, self.kl_2, error_calc, f"{self.far}_test-set"
             )
-            # unc = -(self.alpha * self.kl_1 + (1 - self.alpha) * self.kl_2)
-            # unc = -self.kl_1
-            # unc = -self.kl_2
-        return -(-unc + 2) * 0.5
+        return unc  # -(-unc + 2) * 0.5
 
     def compute_mean_probs_and_kl(
         self,

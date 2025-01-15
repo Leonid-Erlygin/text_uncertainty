@@ -88,7 +88,7 @@ class FrrFarIdent:
         self.true_accept_false_ident = np.logical_and(true_accept, false_ident)
         self.false_reject_false_ident = np.logical_and(self.false_reject, false_ident)
         self.false_reject_true_ident = np.logical_and(self.false_reject, true_ident)
-        false_accept = was_rejected[~self.is_seen] == False
+        self.false_accept = was_rejected[~self.is_seen] == False
         # no error
         self.true_reject = was_rejected[~self.is_seen]
         self.true_accept_true_ident = np.logical_and(true_accept, true_ident)
@@ -98,7 +98,7 @@ class FrrFarIdent:
         ) + np.sum(self.false_reject_false_ident) + np.sum(
             self.false_reject_true_ident
         ) + np.sum(
-            false_accept
+            self.false_accept
         ) + np.sum(
             self.true_reject
         ) + np.sum(
@@ -114,11 +114,11 @@ class FrrFarIdent:
             "osr_metric:false_ident": np.sum(false_ident),
             "osr_metric:false_reject": np.sum(self.false_reject_false_ident)
             + np.sum(self.false_reject_true_ident),
-            "osr_metric:false_accept": np.sum(false_accept),
+            "osr_metric:false_accept": np.sum(self.false_accept),
             "osr_metric:error_sum": np.sum(self.true_accept_false_ident)
             + np.sum(self.false_reject_false_ident)
             + np.sum(self.false_reject_true_ident)
-            + np.sum(false_accept),
+            + np.sum(self.false_accept),
         }
         return result_metrics
 
@@ -152,6 +152,7 @@ class CalibrationPlot:
         probe_unique_ids: np.ndarray,
         predicted_unc: np.ndarray = None,
         method_name: str = None,
+        far: float = None,
     ) -> dict:
         error_calc = FrrFarIdent()
         error_calc(predicted_id, was_rejected, g_unique_ids, probe_unique_ids)
@@ -207,7 +208,7 @@ class CalibrationPlot:
         )
         save_dir = Path(self.plot_save_dir)
         save_dir.mkdir(exist_ok=True)
-        out_file = save_dir / f"{method_name}.png"
+        out_file = save_dir / f"{far}_{method_name}.png"
         fig.savefig(out_file, dpi=300)
         plt.close(fig)
         return {}
