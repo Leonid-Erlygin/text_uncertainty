@@ -2,7 +2,7 @@ hydra:
   run:
     dir: ${exp_dir}
 
-exp_dir: outputs/experiments/mc_kl_with_calib
+exp_dir: outputs/experiments/mc_kl_with_calib_new_temp
 use_two_galleries: False
 recompute_template_pooling: True
 metric_pretty_name_path: /app/configs/latex_tables/pretty_names/column_pretty_name_unc.yaml
@@ -43,7 +43,14 @@ calibration_set:
 open_set_identification_metrics:
   - _target_: evaluation.metrics.ErrorDistribution
     plot_save_dir: ${exp_dir}
-    value_types: [0,1, 2, 3, 4, 5]
+    value_types: [0, 1, 2, 3, 4, 5]
+  - _target_: evaluation.metrics.CalibrationPlot
+    num_bins: 20
+    plot_save_dir: ${exp_dir}/calibration_plots
+    draw_ece: True
+    draw_bin_importance: True
+    draw_averages: True
+    figsize: [6, 6]
   - _target_: evaluation.metrics.DirFar
 
 fractions: [0, 0.5, 20]
@@ -133,59 +140,34 @@ open_set_identification_methods:
       # calibrate_gallery_unc: True
       # calibration_set: ${calibration_set}
       # calibration_embs_name: "scf_2epoch"
-    pretty_name: "$u_{prob}$"
+    pretty_name: "$u_{vMF}$"
 
 
 
-  - embeddings: scf_2epoch
-    gallery_template_pooling_strategy:
-      _target_: evaluation.template_pooling_strategies.PoolingDefault  #PoolingConcentration, PoolingDefault
-    probe_template_pooling_strategy:
-      _target_: evaluation.template_pooling_strategies.PoolingDefault #PoolingProb
-    use_detector_score: False
-    recognition_method:
-      _target_: evaluation.open_set_methods.posterior_prob_based.PosteriorProbability
-      distance_function: 
-        _target_: evaluation.distance_functions.open_set_identification.CosineSim
-      class_model: power
-      far: ${far_list}
-      beta: ${default_beta}
-      uncertainty_type: maxprob
-      alpha: 0.5
-      #gallery_kappa: 651.2229 # 570.8937 # 651.2229 #570.8937
-      aggregation: sum
-      T: 10
-      T_data_unc: 1
-      calibrate_unc: True
-      calibrate_gallery_unc: True
-      calibration_set: ${calibration_set}
-      calibration_embs_name: "scf_2epoch"
-    pretty_name: "$u_{prob} + u_{SCF}$"
-
-
-  - embeddings: scf_2epoch
-    gallery_template_pooling_strategy:
-      _target_: evaluation.template_pooling_strategies.PoolingDefault  #PoolingConcentration, PoolingDefault
-    probe_template_pooling_strategy:
-      _target_: evaluation.template_pooling_strategies.PoolingDefault #PoolingProb
-    use_detector_score: False
-    recognition_method:
-      _target_: evaluation.open_set_methods.class_prob_models.MonteCarloPredictiveProb
-      M: 0
-      gallery_prior: power
-      emb_unc_model: vMF
-      kappa_input_scale: 1
-      beta: 0.5
-      alpha: 0.5
-      predict_T: 20
-      pred_uncertainty_type: entropy
-      far: ${far_list}
-      calibration_set: ${calibration_set}
-      calibration_embs_name: scf_2epoch
-      calibration_transform:
-        _target_: evaluation.open_set_methods.calibration_methods.BoostingCalibration
-        log_dir: ${exp_dir}
-    pretty_name: "$u_{KL} bs$"
+  # - embeddings: scf_2epoch
+  #   gallery_template_pooling_strategy:
+  #     _target_: evaluation.template_pooling_strategies.PoolingDefault  #PoolingConcentration, PoolingDefault
+  #   probe_template_pooling_strategy:
+  #     _target_: evaluation.template_pooling_strategies.PoolingDefault #PoolingProb
+  #   use_detector_score: False
+  #   recognition_method:
+  #     _target_: evaluation.open_set_methods.posterior_prob_based.PosteriorProbability
+  #     distance_function: 
+  #       _target_: evaluation.distance_functions.open_set_identification.CosineSim
+  #     class_model: power
+  #     far: ${far_list}
+  #     beta: ${default_beta}
+  #     uncertainty_type: maxprob
+  #     alpha: 0.5
+  #     #gallery_kappa: 651.2229 # 570.8937 # 651.2229 #570.8937
+  #     aggregation: sum
+  #     T: 10
+  #     T_data_unc: 1
+  #     calibrate_unc: True
+  #     calibrate_gallery_unc: True
+  #     calibration_set: ${calibration_set}
+  #     calibration_embs_name: "scf_2epoch"
+  #   pretty_name: "$u_{prob} + u_{SCF}$"
 
 
   - embeddings: scf_2epoch
@@ -210,6 +192,8 @@ open_set_identification_methods:
       calibration_transform:
         _target_: evaluation.open_set_methods.calibration_methods.NNcalibration
         hidden_size: 6
+        num_layers: 3
+        use_bn: False
         lr: 0.001
         epochs: 2000
         weight: 0

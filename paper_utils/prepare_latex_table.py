@@ -58,7 +58,12 @@ def create_table_head(result_latex_code, caption, table_lable, cfg):
 
 def create_table_body(result_latex_code, cfg):
     all_metric_values = pd.read_csv(cfg.metric_table_path)
-
+    all_metric_values = all_metric_values.drop(
+        all_metric_values[
+            (all_metric_values["models"] == "$u_{random}$")
+            | (all_metric_values["models"] == "$u_{oracle}$")
+        ].index
+    )
     # draw table
 
     # next_ds_index = 1
@@ -66,6 +71,8 @@ def create_table_body(result_latex_code, cfg):
         all_metric_values[cfg.used_columns], cfg.metric_order
     )
     for row_index, (_, row) in enumerate(all_metric_values.iterrows()):
+        # if 'random' in row["models"] or 'oracle' in row["models"]:
+        #     continue
         for column_index, column_name in enumerate(cfg.used_columns):
             if column_name == "models":
                 result_latex_code += cfg.pretty_name.model[row[column_name]] + " & "

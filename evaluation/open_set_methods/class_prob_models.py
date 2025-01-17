@@ -149,7 +149,7 @@ class MonteCarloPredictiveProb:
             # find kappa
             is_seen = np.isin(probe_unique_ids, g_unique_ids)
             kappa_low = 300
-            kappa_high = 1000
+            kappa_high = 1800
             max_iter = 10
             eps = 0.001
             far_loss_func = FarLossCalc(
@@ -207,7 +207,7 @@ class MonteCarloPredictiveProb:
                 "template_pooled_data_unc"
             ]
             kappa_low = 300
-            kappa_high = 1000
+            kappa_high = 1800
             max_iter = 10
             eps = 0.001
             far_loss_func_calib = FarLossCalc(

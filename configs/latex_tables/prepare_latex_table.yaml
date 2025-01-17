@@ -12,15 +12,16 @@ defaults:
   - meta_data@metric_order: metric_order
 
 # dataset: survFace
-dataset: IJBC
-# dataset: IJBB
-# dataset: whale
+#dataset: IJBC
+dataset: IJBB
+#dataset: whale
 #task: open_set_identification
 task: filter
 #task: verification
 #task: closed_set_identification
 # CHANGE
-metric_table_path: outputs/experiments/paper_v1_tables_power_vmf/open_set_identification/{dataset}/filter_tabels/f1_class_prr_filtering.csv
+#metric_table_path: outputs/experiments/whale/open_set_identification/{dataset}/filter_tabels/f1_class_prr_filtering.csv
+metric_table_path: outputs/experiments/mc_kl_with_calib_new_temp/open_set_identification/{dataset}/filter_tabels/f1_class_prr_filtering.csv
 
 caption: >
   Prediction Rejection Ration (PRR) of $F_1$ filtering curve on {dataset_name} dataset.
@@ -38,28 +39,28 @@ used_columns_dict:
       [
         "models",
         #"FAR=0.01",
-        #"FAR=0.05",
+        "FAR=0.05",
         "FAR=0.1",
         "FAR=0.2",
         #"FAR=0.25",
-        "FAR=0.3",
+        # "FAR=0.3",
       ]
     IJBB:
       [
         "models",
         #"FAR=0.01",
-        #"FAR=0.05",
+        "FAR=0.05",
         "FAR=0.1",
         "FAR=0.2",
         #"FAR=0.25",
-        "FAR=0.3",
+        # "FAR=0.3",
       ]
     IJBC:
       [
         "models",
-        "FAR=0.01",
         "FAR=0.05",
         "FAR=0.1",
+        "FAR=0.2"
       ]
   open_set_identification:
     survFace:

@@ -5,6 +5,7 @@ import importlib
 from matplotlib import cm, ticker
 import matplotlib.pyplot as plt
 import seaborn as sns
+import pandas as pd
 from pathlib import Path
 from sklearn.ensemble import GradientBoostingClassifier
 
@@ -334,16 +335,19 @@ class NNcalibration:
             elif false_ident_or_false_reject[i]:
                 pred_kind.append("false ident or reject")
         assert len(pred_kind) == error_calc.is_seen.shape[0]
-
+        hue_order = ["no error", "false accept", "false ident or reject"]
+        kl_data = pd.DataFrame(
+            list(zip(X_norm[:, 0].numpy(), X_norm[:, 1].numpy(), pred_kind)),
+            columns=["kl_1", "kl_2", "prediction kind"],
+        )
         sns.scatterplot(
-            data={
-                "kl_1": X_norm[:, 0].numpy(),
-                "kl_2": X_norm[:, 1].numpy(),
-                "prediction kind": pred_kind,
-            },
+            data=kl_data.sort_values(
+                "prediction kind", key=np.vectorize(hue_order.index)
+            ),
             x="kl_1",
             y="kl_2",
             hue="prediction kind",
+            hue_order=hue_order,
             s=10,
             alpha=0.5,
         )

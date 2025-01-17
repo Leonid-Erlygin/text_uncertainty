@@ -418,6 +418,15 @@ def main(cfg):
                     filter_plots_dir / f"{metric_name.split(':')[-1]}_filtering.png",
                     dpi=300,
                 )
+                filter_plots_pdf_dir = filter_plots_dir / "pdf_plots"
+                filter_plots_pdf_dir.mkdir(parents=True, exist_ok=True)
+                fig.savefig(
+                    filter_plots_pdf_dir
+                    / f"{metric_name.split(':')[-1]}_filtering.pdf",
+                    format="pdf",
+                    bbox_inches="tight",
+                    dpi=300,
+                )
                 plt.close(fig)
 
                 # save filter table
@@ -427,24 +436,24 @@ def main(cfg):
                 )
                 # # save auc table
 
-                # auc_at_far_data_frames.append(
-                #     pd.DataFrame(
-                #         {
-                #             "models": far_to_model_names[far],
-                #             f"FAR={far}": rejection_metric_values,
-                #         }
-                #     )
-                # )
+                auc_at_far_data_frames.append(
+                    pd.DataFrame(
+                        {
+                            "models": far_to_model_names[far],
+                            f"FAR={far}": rejection_metric_values,
+                        }
+                    )
+                )
             for i in range(len(auc_at_far_data_frames) - 1):
                 auc_at_far_data_frames[0] = pd.merge(
                     auc_at_far_data_frames[0],
                     auc_at_far_data_frames[i + 1],
                     on="models",
                 )
-            # auc_at_far_data_frames[0].to_csv(
-            #     aggr_filter_tables_dir
-            #     / f'{metric_name.split(":")[-1]}_prr_filtering.csv'
-            # )
+            auc_at_far_data_frames[0].to_csv(
+                aggr_filter_tables_dir
+                / f'{metric_name.split(":")[-1]}_prr_filtering.csv'
+            )
             continue
             # save trans auc table
             new_auc_df_lines = []
