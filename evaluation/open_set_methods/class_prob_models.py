@@ -103,7 +103,7 @@ class MonteCarloPredictiveProb:
         self.kappa_scale = kappa_scale
         self.kappa_input_scale = kappa_input_scale
         assert gallery_prior in ["power", "vMF"]
-        if gallery_prior == "vMF" or emb_unc_model == "power":
+        if emb_unc_model == "power":
             raise NotImplementedError
         assert emb_unc_model in ["vMF", "power"]
         self.emb_unc_model = emb_unc_model
@@ -322,6 +322,7 @@ class MonteCarloPredictiveProb:
         gallery_kappas: torch.nn.Parameter,
         T: torch.nn.Parameter,
     ) -> Any:
+        gallery_kappas_np = gallery_kappas  # .copy()
         if type(gallery_means) == np.ndarray:
             cuda = torch.device("cuda:0")
             gallery_means = torch.tensor(gallery_means, device=cuda)
@@ -329,30 +330,56 @@ class MonteCarloPredictiveProb:
         self.K = gallery_means.shape[0]
         zs = torch.tensor(self.sampler(mean, kappa), device=gallery_means.device)
         d = torch.tensor([mean.shape[-1]], device=gallery_means.device)
+        d_np = mean.shape[-1]
         similarities = torch.matmul(zs, gallery_means.T)
+        log_uniform_dencity = (
+            torch.special.gammaln(d / 2) - np.log(2) - (d / 2) * np.log(np.pi)
+        )
         if self.gallery_prior == "power":
-            log_m_c_power = (
+            log_m_c = (
                 torch.special.gammaln(d - 1 + gallery_kappas)
                 + torch.special.gammaln(d / 2 + gallery_kappas)
                 + gallery_kappas * np.log(2)
                 - torch.special.gammaln(d / 2)
                 - torch.special.gammaln(d - 1 + 2 * gallery_kappas)
             )
-            # m_c_power = torch.exp(log_m_c_power)
-            log_uniform_dencity = (
-                torch.special.gammaln(d / 2) - np.log(2) - (d / 2) * np.log(np.pi)
+            log_normalizer = log_m_c + log_uniform_dencity
+            pz_c_no_norm_log = torch.multiply(
+                torch.log(
+                    torch.add(similarities, 1, out=similarities), out=similarities
+                ),
+                (gallery_kappas[..., :, 0] * (1 / T)),
+                out=similarities,
             )
-            log_normalizer = log_m_c_power + log_uniform_dencity
-        assert self.gallery_prior == "power"
+        elif self.gallery_prior == "vMF":
+            log_iv = (
+                np.log(ive(d_np / 2 - 1, gallery_kappas_np, dtype=np.float64))
+                + gallery_kappas_np
+            )
+            log_m_c = -np.log(
+                hyp0f1(d_np / 2, gallery_kappas_np**2 / 4, dtype=np.float64)
+            )
+
+            log_normalizer = (
+                (d_np / 2 - 1) * np.log(gallery_kappas_np)
+                - d_np / 2 * np.log(2 * np.pi)
+                - log_iv
+            )
+            log_m_c = torch.tensor(log_m_c, device=cuda)
+            log_normalizer = torch.tensor(log_normalizer, device=cuda)
+            pz_c_no_norm_log = torch.multiply(
+                similarities,
+                (gallery_kappas[..., :, 0] * (1 / T)),
+                out=similarities,
+            )
+        else:
+            raise ValueError
+        # assert self.gallery_prior == "power"
         # compute log z prob
         p_c = ((1 - self.beta) / self.K) ** (1 / T)
-        sim_to_power_log = torch.multiply(
-            torch.log(torch.add(similarities, 1, out=similarities), out=similarities),
-            (gallery_kappas[..., :, 0] * (1 / T)),
-            out=similarities,
-        )
+
         logit_add = torch.add(
-            sim_to_power_log, log_m_c_power[..., :, 0] * (1 / T), out=similarities
+            pz_c_no_norm_log, log_m_c[..., :, 0] * (1 / T), out=similarities
         )
         logit_exp = torch.exp(logit_add, out=similarities)
         logit_sum = (
@@ -368,13 +395,24 @@ class MonteCarloPredictiveProb:
 
         # compute gallery classes log prob
         similarities = torch.matmul(zs, gallery_means.T, out=similarities)
-        sim_to_power_log = torch.multiply(
-            torch.log(torch.add(similarities, 1, out=similarities), out=similarities),
-            (gallery_kappas[..., :, 0] * (1 / T)),
-            out=similarities,
-        )
+        if self.gallery_prior == "power":
+            pz_c_no_norm_log = torch.multiply(
+                torch.log(
+                    torch.add(similarities, 1, out=similarities), out=similarities
+                ),
+                (gallery_kappas[..., :, 0] * (1 / T)),
+                out=similarities,
+            )
+        elif self.gallery_prior == "vMF":
+            pz_c_no_norm_log = torch.multiply(
+                similarities,
+                (gallery_kappas[..., :, 0] * (1 / T)),
+                out=similarities,
+            )
+        else:
+            raise ValueError
         pz_c_log = torch.add(
-            sim_to_power_log,
+            pz_c_no_norm_log,
             (1 / T) * log_normalizer[..., :, 0],
             out=similarities,
         )

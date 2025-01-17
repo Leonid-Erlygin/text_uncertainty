@@ -143,33 +143,6 @@ open_set_identification_methods:
     pretty_name: "$u_{vMF}$"
 
 
-
-  # - embeddings: scf_2epoch
-  #   gallery_template_pooling_strategy:
-  #     _target_: evaluation.template_pooling_strategies.PoolingDefault  #PoolingConcentration, PoolingDefault
-  #   probe_template_pooling_strategy:
-  #     _target_: evaluation.template_pooling_strategies.PoolingDefault #PoolingProb
-  #   use_detector_score: False
-  #   recognition_method:
-  #     _target_: evaluation.open_set_methods.posterior_prob_based.PosteriorProbability
-  #     distance_function: 
-  #       _target_: evaluation.distance_functions.open_set_identification.CosineSim
-  #     class_model: power
-  #     far: ${far_list}
-  #     beta: ${default_beta}
-  #     uncertainty_type: maxprob
-  #     alpha: 0.5
-  #     #gallery_kappa: 651.2229 # 570.8937 # 651.2229 #570.8937
-  #     aggregation: sum
-  #     T: 10
-  #     T_data_unc: 1
-  #     calibrate_unc: True
-  #     calibrate_gallery_unc: True
-  #     calibration_set: ${calibration_set}
-  #     calibration_embs_name: "scf_2epoch"
-  #   pretty_name: "$u_{prob} + u_{SCF}$"
-
-
   - embeddings: scf_2epoch
     gallery_template_pooling_strategy:
       _target_: evaluation.template_pooling_strategies.PoolingDefault  #PoolingConcentration, PoolingDefault
@@ -274,5 +247,29 @@ open_set_identification_methods:
 
 
 
+  # - embeddings: scf_2epoch
+  #   gallery_template_pooling_strategy:
+  #     _target_: evaluation.template_pooling_strategies.PoolingDefault  #PoolingConcentration, PoolingDefault
+  #   probe_template_pooling_strategy:
+  #     _target_: evaluation.template_pooling_strategies.PoolingDefault #PoolingProb
+  #   use_detector_score: False
+  #   recognition_method:
+  #     _target_: evaluation.open_set_methods.posterior_prob_based.PosteriorProbability
+  #     distance_function: 
+  #       _target_: evaluation.distance_functions.open_set_identification.CosineSim
+  #     class_model: power
+  #     far: ${far_list}
+  #     beta: ${default_beta}
+  #     uncertainty_type: maxprob
+  #     alpha: 0.5
+  #     #gallery_kappa: 651.2229 # 570.8937 # 651.2229 #570.8937
+  #     aggregation: sum
+  #     T: 10
+  #     T_data_unc: 1
+  #     calibrate_unc: True
+  #     calibrate_gallery_unc: True
+  #     calibration_set: ${calibration_set}
+  #     calibration_embs_name: "scf_2epoch"
+  #   pretty_name: "$u_{prob} + u_{SCF}$"
 
 

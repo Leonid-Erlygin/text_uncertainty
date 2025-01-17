@@ -78,72 +78,6 @@ display_oracle_curve: True
 open_set_identification_methods:
 
 
-  - embeddings: scf_2epoch
-    gallery_template_pooling_strategy:
-      _target_: evaluation.template_pooling_strategies.PoolingDefault  #PoolingConcentration, PoolingDefault
-    probe_template_pooling_strategy:
-      _target_: evaluation.template_pooling_strategies.PoolingDefault #PoolingProb
-    use_detector_score: False
-    recognition_method:
-      _target_: evaluation.open_set_methods.posterior_prob_based.PosteriorProbability
-      distance_function: 
-        _target_: evaluation.distance_functions.open_set_identification.CosineSim
-      class_model: power
-      far: ${far_list}
-      beta: ${default_beta}
-      uncertainty_type: maxprob
-      alpha: 1 # when 1, only scf unc is used
-      aggregation: sum
-      T: 1
-      T_data_unc: 1
-    pretty_name: "$u_{SCF}$"
-
-
-  - embeddings: scf_2epoch
-    gallery_template_pooling_strategy:
-      _target_: evaluation.template_pooling_strategies.PoolingDefault
-    probe_template_pooling_strategy:
-      _target_: evaluation.template_pooling_strategies.PoolingDefault
-    use_detector_score: False
-    recognition_method:
-      _target_: evaluation.open_set_methods.score_function_based.SimilarityBasedPrediction
-      distance_function: 
-        _target_: evaluation.distance_functions.open_set_identification.CosineSim
-      acceptance_score: 
-        _target_: evaluation.confidence_functions.MaxSimilarity_confidence
-      uncertainty_function:
-        _target_: evaluation.open_set_methods.uncertainty_functions.BernoulliVariance
-      alpha: 0
-      beta_calib: True
-      #calibration_set: ${calibration_set}
-    pretty_name: "$u_{baseline}$"
-
-  - embeddings: scf_2epoch
-    gallery_template_pooling_strategy:
-      _target_: evaluation.template_pooling_strategies.PoolingDefault  #PoolingConcentration, PoolingDefault
-    probe_template_pooling_strategy:
-      _target_: evaluation.template_pooling_strategies.PoolingDefault #PoolingProb
-    use_detector_score: False
-    recognition_method:
-      _target_: evaluation.open_set_methods.posterior_prob_based.PosteriorProbability
-      distance_function: 
-        _target_: evaluation.distance_functions.open_set_identification.CosineSim
-      class_model: power
-      far: ${far_list}
-      beta: ${default_beta}
-      uncertainty_type: maxprob
-      alpha: 0
-      aggregation: sum
-      T: 3
-      T_data_unc: 1
-      # calibrate_unc: True
-      # calibrate_gallery_unc: True
-      # calibration_set: ${calibration_set}
-      # calibration_embs_name: "scf_2epoch"
-    pretty_name: "$u_{vMF}$"
-
-
-
   # - embeddings: scf_2epoch
   #   gallery_template_pooling_strategy:
   #     _target_: evaluation.template_pooling_strategies.PoolingDefault  #PoolingConcentration, PoolingDefault
@@ -158,16 +92,55 @@ open_set_identification_methods:
   #     far: ${far_list}
   #     beta: ${default_beta}
   #     uncertainty_type: maxprob
-  #     alpha: 0.5
-  #     #gallery_kappa: 651.2229 # 570.8937 # 651.2229 #570.8937
+  #     alpha: 1 # when 1, only scf unc is used
   #     aggregation: sum
-  #     T: 10
+  #     T: 1
   #     T_data_unc: 1
-  #     calibrate_unc: True
-  #     calibrate_gallery_unc: True
-  #     calibration_set: ${calibration_set}
-  #     calibration_embs_name: "scf_2epoch"
-  #   pretty_name: "$u_{prob} + u_{SCF}$"
+  #   pretty_name: "$u_{SCF}$"
+
+
+  # - embeddings: scf_2epoch
+  #   gallery_template_pooling_strategy:
+  #     _target_: evaluation.template_pooling_strategies.PoolingDefault
+  #   probe_template_pooling_strategy:
+  #     _target_: evaluation.template_pooling_strategies.PoolingDefault
+  #   use_detector_score: False
+  #   recognition_method:
+  #     _target_: evaluation.open_set_methods.score_function_based.SimilarityBasedPrediction
+  #     distance_function: 
+  #       _target_: evaluation.distance_functions.open_set_identification.CosineSim
+  #     acceptance_score: 
+  #       _target_: evaluation.confidence_functions.MaxSimilarity_confidence
+  #     uncertainty_function:
+  #       _target_: evaluation.open_set_methods.uncertainty_functions.BernoulliVariance
+  #     alpha: 0
+  #     beta_calib: True
+  #     #calibration_set: ${calibration_set}
+  #   pretty_name: "$u_{baseline}$"
+
+  # - embeddings: scf_2epoch
+  #   gallery_template_pooling_strategy:
+  #     _target_: evaluation.template_pooling_strategies.PoolingDefault  #PoolingConcentration, PoolingDefault
+  #   probe_template_pooling_strategy:
+  #     _target_: evaluation.template_pooling_strategies.PoolingDefault #PoolingProb
+  #   use_detector_score: False
+  #   recognition_method:
+  #     _target_: evaluation.open_set_methods.posterior_prob_based.PosteriorProbability
+  #     distance_function: 
+  #       _target_: evaluation.distance_functions.open_set_identification.CosineSim
+  #     class_model: vMF
+  #     far: ${far_list}
+  #     beta: ${default_beta}
+  #     uncertainty_type: maxprob
+  #     alpha: 0
+  #     aggregation: sum
+  #     T: 3
+  #     T_data_unc: 1
+  #     # calibrate_unc: True
+  #     # calibrate_gallery_unc: True
+  #     # calibration_set: ${calibration_set}
+  #     # calibration_embs_name: "scf_2epoch"
+  #   pretty_name: "$u_{vMF}$"
 
 
   - embeddings: scf_2epoch
@@ -179,7 +152,7 @@ open_set_identification_methods:
     recognition_method:
       _target_: evaluation.open_set_methods.class_prob_models.MonteCarloPredictiveProb
       M: 0
-      gallery_prior: power
+      gallery_prior: vMF
       emb_unc_model: vMF
       kappa_input_scale: 1
       beta: 0.5
@@ -274,5 +247,29 @@ open_set_identification_methods:
 
 
 
+  # - embeddings: scf_2epoch
+  #   gallery_template_pooling_strategy:
+  #     _target_: evaluation.template_pooling_strategies.PoolingDefault  #PoolingConcentration, PoolingDefault
+  #   probe_template_pooling_strategy:
+  #     _target_: evaluation.template_pooling_strategies.PoolingDefault #PoolingProb
+  #   use_detector_score: False
+  #   recognition_method:
+  #     _target_: evaluation.open_set_methods.posterior_prob_based.PosteriorProbability
+  #     distance_function: 
+  #       _target_: evaluation.distance_functions.open_set_identification.CosineSim
+  #     class_model: power
+  #     far: ${far_list}
+  #     beta: ${default_beta}
+  #     uncertainty_type: maxprob
+  #     alpha: 0.5
+  #     #gallery_kappa: 651.2229 # 570.8937 # 651.2229 #570.8937
+  #     aggregation: sum
+  #     T: 10
+  #     T_data_unc: 1
+  #     calibrate_unc: True
+  #     calibrate_gallery_unc: True
+  #     calibration_set: ${calibration_set}
+  #     calibration_embs_name: "scf_2epoch"
+  #   pretty_name: "$u_{prob} + u_{SCF}$"
 
 
