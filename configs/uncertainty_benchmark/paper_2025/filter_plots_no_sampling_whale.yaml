@@ -102,7 +102,7 @@ open_set_identification_methods:
       aggregation: sum
       T: 3
       T_data_unc: 1
-    pretty_name: "$u_{SCF}$"
+    pretty_name: "SCF"
 
 
   - embeddings: scf
@@ -122,7 +122,7 @@ open_set_identification_methods:
       alpha: 0
       beta_calib: True
       #calibration_set: ${calibration_set}
-    pretty_name: "$u_{baseline}$"
+    pretty_name: "Baseline"
 
   - embeddings: scf
     gallery_template_pooling_strategy:
@@ -134,19 +134,19 @@ open_set_identification_methods:
       _target_: evaluation.open_set_methods.posterior_prob_based.PosteriorProbability
       distance_function: 
         _target_: evaluation.distance_functions.open_set_identification.CosineSim
-      class_model: power
+      class_model: vMF
       far: ${far_list}
       beta: ${default_beta}
       uncertainty_type: maxprob
       alpha: 0
       aggregation: sum
-      T: 5
+      T: 3
       T_data_unc: 1
       # calibrate_unc: True
       # calibrate_gallery_unc: True
       # calibration_set: ${calibration_set}
       # calibration_embs_name: "scf"
-    pretty_name: "$u_{vMF}$"
+    pretty_name: "vMF"
 
 
   - embeddings: scf
@@ -158,12 +158,12 @@ open_set_identification_methods:
     recognition_method:
       _target_: evaluation.open_set_methods.class_prob_models.MonteCarloPredictiveProb
       M: 0
-      gallery_prior: power
+      gallery_prior: vMF
       emb_unc_model: vMF
       kappa_input_scale: 1
       beta: 0.5
       alpha: 0.5
-      predict_T: 30
+      predict_T: 20
       pred_uncertainty_type: entropy
       far: ${far_list}
       calibration_set: ${calibration_set}
@@ -186,7 +186,8 @@ open_set_identification_methods:
           div_factor: 1e1
           final_div_factor: 1e1
         log_dir: ${exp_dir}
-    pretty_name: "$u_{KL}$"
+    pretty_name: "KL"
+
 
 
 
@@ -205,7 +206,7 @@ open_set_identification_methods:
       uncertainty_function:
         _target_: evaluation.open_set_methods.uncertainty_functions.RandomScore
       alpha: 0
-    pretty_name: "$u_{random}$"
+    pretty_name: "Random"
 
 
   - embeddings: scf
@@ -224,7 +225,7 @@ open_set_identification_methods:
         _target_: evaluation.open_set_methods.uncertainty_functions.OracleScore
       alpha: 0
       oracle_predictions: True
-    pretty_name: "$u_{oracle}$"
+    pretty_name: "Oracle"
 
 
 

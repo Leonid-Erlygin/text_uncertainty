@@ -60,8 +60,8 @@ def create_table_body(result_latex_code, cfg):
     all_metric_values = pd.read_csv(cfg.metric_table_path)
     all_metric_values = all_metric_values.drop(
         all_metric_values[
-            (all_metric_values["models"] == "$u_{random}$")
-            | (all_metric_values["models"] == "$u_{oracle}$")
+            (all_metric_values["models"] == "Random")
+            | (all_metric_values["models"] == "Oracle")
         ].index
     )
     # draw table

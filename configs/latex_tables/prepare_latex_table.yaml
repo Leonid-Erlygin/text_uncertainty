@@ -13,15 +13,15 @@ defaults:
 
 # dataset: survFace
 #dataset: IJBC
-dataset: IJBB
-#dataset: whale
+#dataset: IJBB
+dataset: whale
 #task: open_set_identification
 task: filter
 #task: verification
 #task: closed_set_identification
 # CHANGE
-#metric_table_path: outputs/experiments/whale/open_set_identification/{dataset}/filter_tabels/f1_class_prr_filtering.csv
-metric_table_path: outputs/experiments/mc_kl_with_calib_new_temp/open_set_identification/{dataset}/filter_tabels/f1_class_prr_filtering.csv
+metric_table_path: outputs/experiments/whale/open_set_identification/{dataset}/filter_tabels/f1_class_prr_filtering.csv
+#metric_table_path: outputs/experiments/mc_kl_with_calib_new_temp/open_set_identification/{dataset}/filter_tabels/f1_class_prr_filtering.csv
 
 caption: >
   Prediction Rejection Ration (PRR) of $F_1$ filtering curve on {dataset_name} dataset.

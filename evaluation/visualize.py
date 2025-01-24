@@ -4,12 +4,20 @@ import pandas as pd
 from sklearn.metrics import roc_curve, auc
 import seaborn as sns
 import matplotlib.pyplot as plt
+import matplotlib
 
 
 def plot_rejection_scores(
     scores, y_label, names, random_area: float = None, oracle_area: float = None
 ):
     import matplotlib.pyplot as plt
+
+    font = {
+        "family": "normal",
+        #'weight' : 'bold',
+        "size": 16,
+    }
+    matplotlib.rc("font", **font)
 
     fig = plt.figure()
     rejection_metric_values = []
@@ -29,7 +37,8 @@ def plot_rejection_scores(
             )
             # relative_area_value = (fractions[-1] * np.mean(1 - metric_value)) / (1 - metric_value[0]) * fractions[-1]
             rejection_metric_values.append(rejection_metric_value)
-            label = name + f", PRR score={np.round(rejection_metric_value, 2)}"
+            # label = name + f", PRR score={np.round(rejection_metric_value, 2)}"
+            label = name + f", {np.round(rejection_metric_value, 2)}"
         else:
             label = name
         plt.plot(fractions, metric_value, lw=1, label=label)

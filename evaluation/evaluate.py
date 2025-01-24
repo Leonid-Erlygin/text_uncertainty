@@ -373,14 +373,14 @@ def main(cfg):
             for (method_name, far), metrics in metric_values[(task_type, dataset_name)][
                 "uncertainty"
             ].items():
-                if "random" in pretty_names[task_type][method_name]:
+                if "Random" in pretty_names[task_type][method_name]:
                     random_area = metrics["fractions"][-1] * np.mean(
                         metrics[metric_name]
                     )
                     far_to_random_oracle_areas[far][0] = random_area
                     if cfg.display_oracle_curve is False:
                         continue
-                elif "oracle" in pretty_names[task_type][method_name]:
+                elif "Oracle" in pretty_names[task_type][method_name]:
                     oracle_area = metrics["fractions"][-1] * np.mean(
                         metrics[metric_name]
                     )
