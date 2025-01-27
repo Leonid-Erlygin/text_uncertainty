@@ -118,12 +118,12 @@ class Face_Fecognition_test:
         template_subsets_path = (
             cache_dir
             / Path(self.embedding_type)
-            / f"name_{self.pretty_name}_template_subsets_{self.probe_template_pooling_strategy.__class__.__name__}_{self.test_dataset.dataset_name}_score-norm_{self.use_detector_score}"
+            / f"template_subsets_{self.probe_template_pooling_strategy.__class__.__name__}_{self.test_dataset.dataset_name}_score-norm_{self.use_detector_score}"
         )
         template_pool_path = (
             cache_dir
             / Path(self.embedding_type)
-            / f"name_{self.pretty_name}_template_pool_gallery-{self.gallery_template_pooling_strategy.__class__.__name__}_probe-{self.probe_template_pooling_strategy.__class__.__name__}_{self.test_dataset.dataset_name}"
+            / f"template_pool_gallery-{self.gallery_template_pooling_strategy.__class__.__name__}_probe-{self.probe_template_pooling_strategy.__class__.__name__}_{self.test_dataset.dataset_name}"
         )
 
         similarity_matrix_path = template_subsets_path / "sim_matrix"

@@ -354,3 +354,109 @@ class NNcalibration:
         log_dir = Path(self.log_dir) / "calibration_images"
         log_dir.mkdir(parents=True, exist_ok=True)
         plt.savefig(log_dir / f"{image_name}.png")
+
+
+class Standartization:
+    def __init__(
+        self,
+        normalize_kl_by_test=False,
+        log_dir=None,
+    ):
+        self.normalize_kl_by_test = normalize_kl_by_test
+        self.log_dir = log_dir
+        self.device = torch.device("cpu")
+
+    def train_calibration_parameters(self, kl_1, kl_2, error_calc, save_name):
+        X = torch.tensor(
+            np.concatenate([kl_1[None, :], kl_2[None, :]], axis=0).T,
+            dtype=torch.float32,
+            device=self.device,
+        )
+        true_pred_label = np.zeros(error_calc.is_seen.shape[0])
+        true_pred_label[error_calc.is_seen] = error_calc.true_accept_true_ident
+        true_pred_label[~error_calc.is_seen] = error_calc.true_reject
+        # save validation normalization parameters
+        self.X_mean_val = torch.mean(X, dim=0)
+        self.X_std_val = torch.std(X, dim=0)
+        X_norm = (X - self.X_mean_val) / self.X_std_val
+
+        # draw probs
+        self.draw_dencity_plot(X_norm.cpu(), error_calc, save_name)
+
+    def apply_calibration_transform(self, kl_1, kl_2, error_calc, save_name):
+
+        X = torch.tensor(
+            np.concatenate([kl_1[None, :], kl_2[None, :]], axis=0).T,
+            dtype=torch.float32,
+            device=self.device,
+        )
+        if self.normalize_kl_by_test:
+            self.X_mean_test = torch.mean(X, dim=0)
+            self.X_std_test = torch.std(X, dim=0)
+            X_norm = (X - self.X_mean_test) / self.X_std_test
+        else:
+            X_norm = (X - self.X_mean_val) / self.X_std_val
+        self.draw_dencity_plot(X_norm.cpu(), error_calc, save_name)
+        predictions_perceptron = torch.sum(X_norm, dim=1)  # self.perceptron(X_norm)
+        unc = -predictions_perceptron.detach().cpu().numpy()
+        return unc
+
+    def draw_dencity_plot(self, X_norm, error_calc, image_name):
+        true_pred = np.zeros(error_calc.is_seen.shape[0])
+        true_pred[error_calc.is_seen] = error_calc.true_accept_true_ident
+        true_pred[~error_calc.is_seen] = error_calc.true_reject
+        false_accept = np.zeros(error_calc.is_seen.shape[0])
+        false_accept[~error_calc.is_seen] = error_calc.false_accept
+        false_ident_or_false_reject = np.zeros(error_calc.is_seen.shape[0])
+        false_ident_or_false_reject[error_calc.is_seen] = (
+            ~error_calc.true_accept_true_ident
+        )
+
+        size = 500
+        kl_1 = torch.linspace(
+            X_norm[:, 0].min(), X_norm[:, 0].max(), size, device=self.device
+        )
+        kl_2 = torch.linspace(
+            X_norm[:, 1].min(), X_norm[:, 1].max(), size, device=self.device
+        )
+        grid_x, grid_y = np.meshgrid(
+            kl_1.cpu().numpy(), kl_2.cpu().numpy(), indexing="ij"
+        )
+        product = torch.cartesian_prod(kl_1, kl_2)
+
+        predict_prob = torch.sum(product, dim=1)
+        z = np.reshape(predict_prob.detach().cpu().numpy(), (size, size)).T
+        z_min, z_max = z.min(), z.max()
+
+        fig, ax = plt.subplots()
+        cs = ax.contourf(grid_x, grid_y, z, cmap=cm.PuBu_r, vmin=z_min, vmax=z_max)
+        ax.axis([grid_x.min(), grid_x.max(), grid_y.min(), grid_y.max()])
+        cbar = fig.colorbar(cs)
+        pred_kind = []
+        for i in range(error_calc.is_seen.shape[0]):
+            if true_pred[i]:
+                pred_kind.append("no error")
+            elif false_accept[i]:
+                pred_kind.append("false accept")
+            elif false_ident_or_false_reject[i]:
+                pred_kind.append("false ident or reject")
+        assert len(pred_kind) == error_calc.is_seen.shape[0]
+        hue_order = ["no error", "false accept", "false ident or reject"]
+        kl_data = pd.DataFrame(
+            list(zip(X_norm[:, 0].numpy(), X_norm[:, 1].numpy(), pred_kind)),
+            columns=["kl_1", "kl_2", "prediction kind"],
+        )
+        sns.scatterplot(
+            data=kl_data.sort_values(
+                "prediction kind", key=np.vectorize(hue_order.index)
+            ),
+            x="kl_1",
+            y="kl_2",
+            hue="prediction kind",
+            hue_order=hue_order,
+            s=10,
+            alpha=0.5,
+        )
+        log_dir = Path(self.log_dir) / "calibration_images"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        plt.savefig(log_dir / f"{image_name}.png")

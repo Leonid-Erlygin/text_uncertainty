@@ -21,15 +21,15 @@ task: filter
 #task: closed_set_identification
 # CHANGE
 #metric_table_path: outputs/experiments/whale/open_set_identification/{dataset}/filter_tabels/f1_class_prr_filtering.csv
-metric_table_path: outputs/experiments/mc_kl_with_calib_new_temp/open_set_identification/{dataset}/filter_tabels/f1_class_prr_filtering.csv
-
+#metric_table_path: outputs/experiments/mc_kl_with_calib_new_temp/open_set_identification/{dataset}/filter_tabels/f1_class_prr_filtering.csv
+metric_table_path: outputs/experiments/mc_kl_compare_norm/open_set_identification/{dataset}/filter_tabels/f1_class_prr_filtering.csv
 caption: >
   Prediction Rejection Ration (PRR) of $F_1$ filtering curve on {dataset_name} dataset.
   
 fix_table: False
 table_lable: "tab:${task}_${dataset}"
 round_num: 2
-use_scriptsize: True
+use_scriptsize: False
 use_adjustbox: False
 
 used_columns: []

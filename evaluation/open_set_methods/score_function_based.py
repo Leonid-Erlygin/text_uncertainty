@@ -20,8 +20,8 @@ class SimilarityBasedPrediction(OpenSetMethod):
         T_data_unc: float = None,
         far: float = None,
         calibration_set: bool = None,
-        embs_name=None,
-        beta_calib: bool = True,
+        calibration_embs_name=None,
+        calib_strategy="norm_val",
         oracle_predictions: bool = False,
     ) -> None:
         super().__init__()
@@ -36,10 +36,10 @@ class SimilarityBasedPrediction(OpenSetMethod):
         self.oracle_predictions = oracle_predictions
         if self.calibration_set is None:
             return
-        self.calibrate_by_false_reject = False
-        self.beta_calib = beta_calib
+        self.calib_strategy = calib_strategy
+        assert self.calib_strategy in ["norm_val", "norm_test"]
         self.gallery_pooled_templates_calib, self.probe_pooled_templates_calib = (
-            prepare_calibration_dataset(calibration_set, embs_name)
+            prepare_calibration_dataset(calibration_set, calibration_embs_name)
         )
 
     def setup(
@@ -132,10 +132,10 @@ class SimilarityBasedPrediction(OpenSetMethod):
             )
         if self.calibration_set is not None:
             # logistic calibration for scf confidence
-            error_calc = FrrFarIdent()
+            error_calc_calib = FrrFarIdent()
             predicted_id = np.argmax(self.similarity_matrix_calib, axis=-1)
             was_rejected = self.probe_score_calib < self.tau
-            error_calc(
+            error_calc_calib(
                 predicted_id,
                 was_rejected,
                 self.gallery_pooled_templates_calib["g1"][
@@ -148,41 +148,54 @@ class SimilarityBasedPrediction(OpenSetMethod):
                     "template_subject_ids_sorted"
                 ].shape[0]
             )
-            if self.calibrate_by_false_reject:
-                true_pred_label[~error_calc.is_seen] = True
-                true_pred_label[error_calc.is_seen] = error_calc.true_accept_true_ident
+            if self.calib_strategy == "norm_val":
+                pass
+            elif self.calib_strategy == "norm_test":
+                pass
             else:
-                true_pred_label[error_calc.is_seen] = error_calc.true_accept_true_ident
-                true_pred_label[~error_calc.is_seen] = error_calc.true_reject
-            data_uncertainty_calib = self.probe_pooled_templates_calib["g1"][
-                "template_pooled_data_unc"
-            ][:, 0]
-            data_conf = PosteriorProbability.calibrate_scf_unc(
-                self.data_uncertainty,
-                data_uncertainty_calib,
-                true_pred_label,
-                verbose=False,
-            )
-
-            # calibration for baseline scores
-            if self.alpha == 1:
-                conf_norm = -unc
-            else:
-                unc_calib = self.uncertainty_function(
-                    self.similarity_matrix_calib, self.probe_score_calib, self.tau
-                )
-                if self.beta_calib:
-                    conf_norm = PosteriorProbability.beta_calib(
-                        -unc, -unc_calib, true_pred_label
+                raise ValueError
+                if self.calibrate_by_false_reject:
+                    true_pred_label[~error_calc_calib.is_seen] = True
+                    true_pred_label[error_calc_calib.is_seen] = (
+                        error_calc_calib.true_accept_true_ident
                     )
                 else:
-                    conf_norm = PosteriorProbability.calibrate_scf_unc(
-                        -unc,
-                        -unc_calib,
-                        true_pred_label,
-                        verbose=False,
-                        scale_factor=1,
+                    true_pred_label[error_calc_calib.is_seen] = (
+                        error_calc_calib.true_accept_true_ident
                     )
+                    true_pred_label[~error_calc_calib.is_seen] = (
+                        error_calc_calib.true_reject
+                    )
+                data_uncertainty_calib = self.probe_pooled_templates_calib["g1"][
+                    "template_pooled_data_unc"
+                ][:, 0]
+
+                data_conf = PosteriorProbability.calibrate_scf_unc(
+                    self.data_uncertainty,
+                    data_uncertainty_calib,
+                    true_pred_label,
+                    verbose=False,
+                )
+
+                # calibration for baseline scores
+                if self.alpha == 1:
+                    conf_norm = -unc
+                else:
+                    unc_calib = self.uncertainty_function(
+                        self.similarity_matrix_calib, self.probe_score_calib, self.tau
+                    )
+                    if self.beta_calib:
+                        conf_norm = PosteriorProbability.beta_calib(
+                            -unc, -unc_calib, true_pred_label
+                        )
+                    else:
+                        conf_norm = PosteriorProbability.calibrate_scf_unc(
+                            -unc,
+                            -unc_calib,
+                            true_pred_label,
+                            verbose=False,
+                            scale_factor=1,
+                        )
         else:
             data_conf = self.data_uncertainty
             conf_norm = -unc
