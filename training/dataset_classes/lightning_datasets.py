@@ -305,14 +305,14 @@ class UncertaintyDataModule(pl.LightningDataModule):
                 num_workers=self.num_workers,
             )
 
-    def val_dataloader(self):
-        return DataLoader(
-            self.validation_dataset,
-            batch_size=self.batch_size,
-            drop_last=False,
-            shuffle=False,
-            num_workers=self.num_workers,
-        )
+    # def val_dataloader(self):
+    #     return DataLoader(
+    #         self.validation_dataset,
+    #         batch_size=self.batch_size,
+    #         drop_last=False,
+    #         shuffle=False,
+    #         num_workers=self.num_workers,
+    #     )
 
     def predict_dataloader(self):
         return DataLoader(

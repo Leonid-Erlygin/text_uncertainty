@@ -2,6 +2,55 @@ from torch.utils.data.sampler import Sampler
 import numpy as np
 
 
+class PfeSampler(Sampler):
+    r"""Yield a mini-batch of indices.
+
+    Args:
+        batch_size: Size of mini-batch.
+    """
+
+    def __init__(self, batch_size, labels_path):
+        self.batch_size = batch_size
+        self.rng = np.random.default_rng(776)
+        self.labels = np.load(labels_path)
+
+        fwd = np.argsort(self.labels)
+        self.labels_sorted = self.labels[fwd]
+        keys = np.unique(self.labels_sorted)
+        lower = np.searchsorted(self.labels_sorted, keys)
+
+        higher = np.append(lower[1:], len(self.labels_sorted))
+        self.inv = {
+            key: fwd[lower_i:higher_i]
+            for key, lower_i, higher_i in zip(keys, lower, higher)
+        }
+
+        assert all(
+            np.all(self.labels[indices] == key) for key, indices in self.inv.items()
+        )
+
+    def __iter__(self):
+        # implement logic of sampling here
+        for _ in range(int(len(self.labels) // self.batch_size)):
+            batch_ids = []
+            # sample subjects
+            subjects = self.rng.choice(
+                self.labels_sorted, self.batch_size // 4, replace=False
+            )
+            for label in subjects:
+                img_ids = self.inv[label]
+                if len(img_ids) > 4:
+                    replace = False
+                else:
+                    replace = True
+                batch_ids.append(self.rng.choice(img_ids, 4, replace=replace))
+            batch_ids = np.concatenate(batch_ids)
+            yield batch_ids
+
+    def __len__(self):
+        return int(len(self.labels) // self.batch_size)
+
+
 class UniformBatchSamplerWithBins(Sampler):
     r"""Yield a mini-batch of indices.
 
@@ -86,10 +135,6 @@ class UniformBatchSampler(Sampler):
             )
             uniform_batch_ids = self.sorted_id_map[sorted_batch_ids]
             yield uniform_batch_ids
-        # uniform_batch_cosine = cosine_sim[uniform_batch_ids]
-        # batch = []
-        # for i, item in enumerate(self.data):
-        #     batch.append(i)
 
     def __len__(self):
         return int(len(self.sorted_id_scores) // self.batch_size)
