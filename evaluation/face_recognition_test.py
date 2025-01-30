@@ -191,8 +191,12 @@ class Face_Fecognition_test:
                     probe_templates_sorted=probe_templates_sorted,
                     probe_subject_ids_sorted=probe_subject_ids_sorted,
                 )
-            assert probe_unc.shape[1] == 1  # working with scf unc
-            probe_kappa = np.exp(probe_unc)
+            # if probe_unc.shape[1] == 1:
+            #     # exponentiate kappa
+            #     probe_unc = np.exp(probe_unc)
+            # assert probe_unc.shape[1] == 1  # working with scf unc
+            probe_unc = np.exp(probe_unc)
+            # probe_kappa = np.exp(probe_unc)
 
             for gallery_name in used_galleries:
                 gallery_templates = getattr(
@@ -232,8 +236,9 @@ class Face_Fecognition_test:
                         gallery_subject_ids_sorted=gallery_subject_ids_sorted,
                     )
                 # 1. pool selected gallery templates
-                assert gallery_unc.shape[1] == 1  # working with scf unc
-                kappa = np.exp(gallery_unc)
+                # assert gallery_unc.shape[1] == 1  # working with scf unc
+                gallery_unc = np.exp(gallery_unc)
+                # kappa = np.exp(gallery_unc)
                 if (
                     template_pool_path / f"gallery_{gallery_name}.npz"
                 ).is_file() and self.recompute_template_pooling is False:
@@ -246,7 +251,7 @@ class Face_Fecognition_test:
                 else:
                     pooled_data = self.gallery_template_pooling_strategy(
                         gallery_features,
-                        kappa,
+                        gallery_unc,
                         gallery_templates_sorted,
                         gallery_medias,
                     )
@@ -275,7 +280,7 @@ class Face_Fecognition_test:
                     else:
                         self.recognition_method.setup(
                             probe_features,
-                            probe_kappa,
+                            probe_unc,
                             self.gallery_pooled_templates[gallery_name][
                                 "template_pooled_features"
                             ],
@@ -305,7 +310,7 @@ class Face_Fecognition_test:
                         probe_pooled_data = self.probe_template_pooling_strategy(
                             probe_features,
                             -predicted_unc,
-                            probe_kappa,
+                            probe_unc,
                             probe_templates_sorted,
                             probe_medias,
                         )
@@ -323,7 +328,7 @@ class Face_Fecognition_test:
                     else:
                         probe_pooled_data = self.probe_template_pooling_strategy(
                             probe_features,
-                            probe_kappa,
+                            probe_unc,
                             probe_templates_sorted,
                             probe_medias,
                         )

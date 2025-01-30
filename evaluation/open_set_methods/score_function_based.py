@@ -1,6 +1,7 @@
 import numpy as np
 from .base_method import OpenSetMethod
 from evaluation.open_set_methods.posterior_prob_based import PosteriorProb
+import scipy
 from scipy import interpolate
 from evaluation.open_set_methods.posterior_prob_based import (
     prepare_calibration_dataset,
@@ -106,9 +107,10 @@ class SimilarityBasedPrediction(OpenSetMethod):
     def predict_uncertainty(self):
         if self.data_uncertainty.shape[1] == 1:
             # here self.data_uncertainty is scf concetration
-            self.data_uncertainty = self.data_uncertainty[:, 0]
+            self.data_conf = self.data_uncertainty[:, 0]
         else:
-            raise NotImplemented
+            # pfe
+            self.data_conf = 1 / scipy.stats.hmean(self.data_uncertainty, axis=1)
         if self.oracle_predictions:
             # compute true pred labels
             error_calc = FrrFarIdent()
@@ -166,13 +168,13 @@ class SimilarityBasedPrediction(OpenSetMethod):
                     true_pred_label[~error_calc_calib.is_seen] = (
                         error_calc_calib.true_reject
                     )
-                data_uncertainty_calib = self.probe_pooled_templates_calib["g1"][
+                data_conf_calib = self.probe_pooled_templates_calib["g1"][
                     "template_pooled_data_unc"
                 ][:, 0]
 
                 data_conf = PosteriorProbability.calibrate_scf_unc(
-                    self.data_uncertainty,
-                    data_uncertainty_calib,
+                    self.data_conf,
+                    data_conf_calib,
                     true_pred_label,
                     verbose=False,
                 )
@@ -197,7 +199,7 @@ class SimilarityBasedPrediction(OpenSetMethod):
                             scale_factor=1,
                         )
         else:
-            data_conf = self.data_uncertainty
+            data_conf = self.data_conf
             conf_norm = -unc
         comb_conf = conf_norm * (1 - self.alpha) + data_conf * self.alpha
         return -comb_conf
