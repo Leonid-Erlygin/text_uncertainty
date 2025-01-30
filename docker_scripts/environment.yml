@@ -26,6 +26,8 @@ dependencies:
     - numexpr
     - wandb
     - onnx
+    - optuna
+    - timm
     - onnx2torch
     - albumentations
     - tabulate
