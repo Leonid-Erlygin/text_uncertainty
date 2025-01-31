@@ -1,5 +1,4 @@
-"""Test protocol for IJB-A.
-"""
+"""Test protocol for IJB-A."""
 
 # MIT License
 #

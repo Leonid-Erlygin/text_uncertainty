@@ -16,14 +16,18 @@ from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import ConcatDataset, DataLoader
 
-from config.config import Config, load_config
-from src.dataset import WhaleDataset, load_df
-from src.metric_learning import (
+from training.models.whale_arcface.config.config import Config, load_config
+from training.models.whale_arcface.src.dataset import WhaleDataset, load_df
+from training.models.whale_arcface.src.metric_learning import (
     ArcFaceLossAdaptiveMargin,
     ArcMarginProductSubcenter,
     GeM,
 )
-from src.utils import WarmupCosineLambda, map_dict, topk_average_precision
+from training.models.whale_arcface.src.utils import (
+    WarmupCosineLambda,
+    map_dict,
+    topk_average_precision,
+)
 
 
 def parse():

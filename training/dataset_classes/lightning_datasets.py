@@ -333,7 +333,7 @@ class WhaleDataset(Dataset):
         val_bbox_name = "fullbody"
         cfg = load_config(
             config_path,
-            "sandbox/happy_whale/kaggle-happywhale-1st-place/config/default.yaml",
+            "/app/training/models/whale_arcface/config/default.yaml",
         )
         df = load_df(image_dir, cfg, "train.csv", True)
         self.index = df.index
@@ -410,7 +410,9 @@ class WhaleDataset(Dataset):
             xmin, ymin, xmax, ymax = bbox
             image = image[ymin:ymax, xmin:xmax]
         # resize
-        image = cv2.resize(image, self.cfg.image_size, interpolation=cv2.INTER_CUBIC)
+        image = cv2.resize(
+            image, tuple(self.cfg.image_size), interpolation=cv2.INTER_CUBIC
+        )
         # data augmentation
         augmented = self.transform(image=image)["image"]
         if self.test:

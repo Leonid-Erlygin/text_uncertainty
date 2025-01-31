@@ -6,7 +6,7 @@ from albumentations.pytorch import ToTensorV2
 from sklearn import preprocessing
 from torch.utils.data import Dataset
 
-from config.config import Config
+from training.models.whale_arcface.config.config import Config
 
 
 class WhaleDataset(Dataset):

@@ -9,7 +9,7 @@ import torch
 from sklearn import preprocessing
 from sklearn.neighbors import NearestNeighbors
 
-from config.config import Config, load_config
+from training.models.whale_arcface.config.config import Config, load_config
 
 
 def parse() -> argparse.Namespace:

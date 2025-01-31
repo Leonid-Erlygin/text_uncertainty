@@ -58,3 +58,4 @@ RUN curl -sLo ~/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-py39
  && rm /app/environment.yml \
  && conda clean -ya
  
+RUN pip install optuna-integration[pytorch_lightning]

@@ -3,9 +3,9 @@ import copy
 
 import optuna
 
-from config.config import load_config
-from src.dataset import load_df
-from src.train import train
+from training.models.whale_arcface.config.config import load_config
+from training.models.whale_arcface.src.dataset import load_df
+from training.models.whale_arcface.src.train import train
 
 
 def parse():
