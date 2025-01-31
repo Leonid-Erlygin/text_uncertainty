@@ -125,7 +125,8 @@ class SimilarityBasedPrediction(OpenSetMethod):
             unc = np.zeros(self.probe_unique_ids.shape[0])
             # false predictions with random priority
             false_pred_unc = np.arange(np.sum(~true_pred_label)) + 1
-            np.random.shuffle(false_pred_unc)
+            rng = np.random.default_rng(1)
+            rng.shuffle(false_pred_unc)
             unc[~true_pred_label] = false_pred_unc
 
         else:

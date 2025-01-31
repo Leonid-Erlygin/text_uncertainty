@@ -17,12 +17,14 @@ class BernoulliVariance:
 class RandomScore:
     def __call__(self, similarity: np.ndarray, probe_score: np.ndarray, tau) -> Any:
         unc_score = np.arange(probe_score.shape[0])
-        np.random.shuffle(unc_score)
+        rng = np.random.default_rng(1)
+        rng.shuffle(unc_score)
         return unc_score
 
 
 class OracleScore:
     def __call__(self, similarity: np.ndarray, probe_score: np.ndarray, tau) -> Any:
         unc_score = np.arange(probe_score.shape[0])
-        np.random.shuffle(unc_score)
+        rng = np.random.default_rng(1)
+        rng.shuffle(unc_score)
         return unc_score

@@ -58,7 +58,7 @@ def draw_circle(ax, linewidth, zorder=4):
     ax.axis("off")
 
 
-def draw_example(kappa, gallery_class_angles, text_shift, save_name, beta=0.5):
+def draw_example(kappa, gallery_class_angles, text_shift, save_name, beta=0.5, unc_type='entropy'):
     fontsize = 20
     linewidth = 3
     dot_size = 80
@@ -108,7 +108,12 @@ def draw_example(kappa, gallery_class_angles, text_shift, save_name, beta=0.5):
         class_probes = compute_class_probs(i, zs, mus, kappa, beta)
         all_probs.append(class_probes)
     all_probs = np.stack(all_probs, axis=0)
-    unc = -np.sum(all_probs * np.log(all_probs), axis=0)
+    if unc_type == 'entropy':
+        unc = -np.sum(all_probs * np.log(all_probs), axis=0)
+    elif unc_type == 'max_prob':
+        unc = -(np.max(all_probs, axis=0) - 1)
+    else:
+        raise ValueError
     v = zs.T * (1 + unc[np.newaxis, :])
     ax.plot(v[0], v[1], color="tab:red", linewidth=linewidth)
 
@@ -131,7 +136,12 @@ def draw_example(kappa, gallery_class_angles, text_shift, save_name, beta=0.5):
         probs_at_test_points.append(class_probes)
     probs_at_test_points = np.stack(probs_at_test_points, axis=0)
 
-    unc_test = -np.sum(probs_at_test_points * np.log(probs_at_test_points), axis=0)
+    if unc_type == 'entropy':
+        unc_test = -np.sum(probs_at_test_points * np.log(probs_at_test_points), axis=0)
+    elif unc_type == 'max_prob':
+        unc_test = np.max(probs_at_test_points, axis=0)
+    else:
+        raise ValueError
     unc_test = np.round(unc_test, 2)
     ax.annotate(
         f"${unc_test[0]}$",

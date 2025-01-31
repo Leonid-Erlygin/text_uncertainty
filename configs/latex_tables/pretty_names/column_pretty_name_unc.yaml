@@ -7,6 +7,8 @@
 "false_reject": ["False Reject", "Count $(\\downarrow)$"]
 "error_sum": ["All errors", "Count $(\\downarrow)$"]
 "dir": ["DIR", "$(\\uparrow)$"]
+"fpir": ["FPIR", "$(\\downarrow)$"]
+"fnir": ["FNIR", "$(\\downarrow)$"]
 "far": ["FAR", " $(\\downarrow)$"]
 "f1": ["F1", " $(\\uparrow)$"]
 "f1_class": ["$F_1$"] #["$F_1$", " $(\\uparrow)$"]

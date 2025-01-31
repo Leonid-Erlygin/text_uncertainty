@@ -7,7 +7,7 @@ docker run \
  --rm \
  --init \
  -v $(dirname "$PWD"):/app \
- --gpus '"device=3"' \
+ --gpus '"device=1"' \
  -w="/app" \
  ${USER}_$(basename $(dirname "$PWD")) \
  python3 training/trainers/train_multiple_runs_scf.py -cn=predict_pfe_whale

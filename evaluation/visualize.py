@@ -32,9 +32,11 @@ def plot_rejection_scores(
         # rejection_metric_value = rejection_metric(rank, cmc)
         auc_value = fractions[-1] * np.mean(metric_value)
         if random_area is not None:
-            rejection_metric_value = np.abs(
-                (auc_value - random_area) / (oracle_area - random_area)
-            )
+            # rejection_metric_value = np.abs(
+            #     (auc_value - random_area) / (oracle_area - random_area)
+            # )
+            rejection_metric_value = (auc_value - random_area) / (oracle_area - random_area)
+            
             # relative_area_value = (fractions[-1] * np.mean(1 - metric_value)) / (1 - metric_value[0]) * fractions[-1]
             rejection_metric_values.append(rejection_metric_value)
             # label = name + f", PRR score={np.round(rejection_metric_value, 2)}"

@@ -9,7 +9,7 @@ docker run \
  --rm \
  --init \
  -v $(dirname "$PWD"):/app \
- --gpus '"device=3"' \
+ --gpus '"device=4"' \
  -w="/app" \
  ${USER}_$(basename $(dirname "$PWD")) \
  python3 training/trainers/train_multiple_runs_scf.py -cn=train_pfe_base #train_scf_base train_scf_blur

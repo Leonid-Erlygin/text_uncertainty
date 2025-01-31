@@ -334,7 +334,6 @@ class FnirFpir:
         method_name: str = None,
         far: float = None,
     ) -> dict:
-        raise ValueError  # , "work in progress"
         is_seen = np.isin(probe_unique_ids, g_unique_ids)
         similar_gallery_class = g_unique_ids[predicted_id[is_seen]]
         dir = np.mean(
@@ -345,8 +344,8 @@ class FnirFpir:
         )
         far = np.mean(was_rejected[~is_seen] == False)
         result_metrics = {
-            "osr_metric:dir": dir,
-            "osr_metric:far": far,
+            "osr_metric:fnir": 1-dir,
+            "osr_metric:fpir": far,
         }
         return result_metrics
 
