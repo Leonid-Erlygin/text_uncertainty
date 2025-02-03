@@ -344,7 +344,7 @@ class FnirFpir:
         )
         far = np.mean(was_rejected[~is_seen] == False)
         result_metrics = {
-            "osr_metric:fnir": 1-dir,
+            "osr_metric:fnir": 1 - dir,
             "osr_metric:fpir": far,
         }
         return result_metrics

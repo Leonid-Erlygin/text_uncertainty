@@ -6,6 +6,7 @@ exp_dir: outputs/latex_tables/${now:%Y-%m-%d_%H-%M-%S}
 
 defaults:
   - _self_
+  - pretty_names@pretty_name.dataset: dataset_pretty_name
   - pretty_names@pretty_name.task: task_pretty_name
   - pretty_names@pretty_name.model: model_pretty_name_vMF
   - pretty_names@pretty_name.column: column_pretty_name_unc
@@ -13,7 +14,7 @@ defaults:
 
 # dataset: survFace
 #dataset: IJBB
-dataset: IJBC
+datasets: ["IJBC", "IJBB", "whale"]
 #dataset: whale
 #task: open_set_identification
 task: filter
@@ -24,12 +25,13 @@ task: filter
 metric_table_path: outputs/experiments/main_filtering_results/open_set_identification/{dataset}/filter_tabels/f1_class_prr_filtering.csv
 
 caption: >
-  Prediction Rejection Ration (PRR) of $F_1$ filtering curve on {dataset_name} dataset.
+  Prediction Rejection Ratios (PRR) for $F_1$ filtering curve for the three considered datasets IJB-C, IJB-B, Whale.
   
 fix_table: False
-table_lable: "tab:${task}_${dataset}"
+table_lable: "tab:${task}"
 round_num: 2
-use_scriptsize: True
+table_size: footnotesize
+tabcolsep: 3
 use_adjustbox: False
 
 used_columns: []
