@@ -42,7 +42,7 @@ def plot_rejection_scores(
             # relative_area_value = (fractions[-1] * np.mean(1 - metric_value)) / (1 - metric_value[0]) * fractions[-1]
             rejection_metric_values.append(rejection_metric_value)
             # label = name + f", PRR score={np.round(rejection_metric_value, 2)}"
-            label = name + f", {np.round(rejection_metric_value, 2)}"
+            label = name + f", {np.abs(np.round(rejection_metric_value, 2))}"
         else:
             label = name
         plt.plot(fractions, metric_value, lw=1, label=label)

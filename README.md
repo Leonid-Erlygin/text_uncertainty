@@ -1,14 +1,14 @@
-# Оценка неопределённости предсказаний в задаче открытого распознавания лиц
+# Holistic Uncertainty Estimation For Open-Set Recognition
 
-### Системные требования
-- **Версия Docker**: 25.0.3
-- **Версия CUDA**: 12.2
+### System Requirements
+- **Docker Version**: 25.0.3
+- **CUDA Version**: 12.2
 
-### Шаги подготовки репозитория
+### Repository Setup Steps
 
-1. **Скачивание наборов данных**:
-   - Используйте предоставленную ссылку для скачивания наборов данных: [Ссылка на Яндекс Диск](https://disk.yandex.ru/d/TjOwePopUJmbpA)
-   - Извлеките папку `datasets` и поместите её в корневую директорию проекта. Структура должна выглядеть следующим образом:
+1. **Downloading Datasets**:
+   - Use the provided link to download the datasets: [Yandex Disk Link](https://disk.yandex.ru/d/TjOwePopUJmbpA)
+   - Extract the `datasets` folder and place it in the root directory of the project. The structure should look like this:
      ```
      face_ue
      │   README.md
@@ -18,47 +18,47 @@
      │   ...
      ```
 
-2. **Сборка Docker-образа**:
-   - Перейдите в директорию `docker_scripts` и запустите скрипт сборки:
+2. **Building the Docker Image**:
+   - Navigate to the `docker_scripts` directory and run the build script:
      ```bash
      cd docker_scripts
      bash build.sh
      ```
-   - Процесс сборки образа занимает примерно 10 минут и установит все необходимые зависимости.
+   - The image building process takes approximately 10 minutes and will install all necessary dependencies.
 
-3. **(Опционально) Создание контейнера для разработки**:
-   - Если вы хотите создать контейнер для разработки, выполните следующие команды:
+3. **(Optional) Creating a Development Container**:
+   - If you want to create a container for development, execute the following commands:
      ```bash
      cd docker_scripts
      bash launch_container.sh
      ```
-   - После выполнения вышеуказанных команд вы можете подключиться к контейнеру с помощью Visual Studio Code (VSCode).
+   - After running the above commands, you can connect to the container using Visual Studio Code (VSCode).
 
-### Оценка метода
+### Method Evaluation
 
-Для создания графиков фильтрации тестовых примеров следуйте следующим шагам:
+To create plots for filtering test samples, follow these steps:
 
-1. **Запуск скрипта построение оценок неопределённости и подсчёта метрик качества**:
-   - Перейдите в директорию `scripts` и запустите скрипт оценки неопределённости на наборах данных IJBB и IJBC:
+1. **Running the Uncertainty Estimation and Quality Metrics Script**:
+   - Navigate to the `scripts` directory and run the uncertainty estimation script on the IJBB and IJBC datasets:
      ```bash
      cd scripts
      bash evaluate_filtering.sh
      ```
-   - Перейдите в директорию `scripts` и запустите скрипт оценки неопределённости на наборе данных Whale:
+   - Navigate to the `scripts` directory and run the uncertainty estimation script on the Whale dataset:
      ```bash
      cd scripts
      bash evaluate_filtering_whale.sh
      ```
-   - Первый запуск может занять некоторое время.
+   - The first run may take some time.
 
-2. **Хранение вывода**:
-   - Все графики будут сохранены в директории `outputs/experiments/filtering_plots`.
-   - Например, графики для набора данных IJBC будут сохранены в `outputs/experiments/filtering_plots/open_set_identification/IJBC/filter_plots/0.1`, потому что метод тестируется на наборах данных IJBC с уровнем ложных срабатываний (FAR) 0.1, как указано в конфигурации.
+2. **Storing Output**:
+   - All plots will be saved in the `outputs/experiments/filtering_plots` directory.
+   - For example, plots for the IJBC dataset will be saved in `outputs/experiments/filtering_plots/open_set_identification/IJBC/filter_plots/0.1` because the method is tested on the IJBC datasets with a False Acceptance Rate (FAR) of 0.1, as specified in the configuration.
 
-3. **Конфигурация**:
-   - Скрипты оценок неопределённости и подсчёта метрик качества будут запущены с конфигурационными файлами `configs/uncertainty_benchmark/evaluate_filtering.yaml` и `configs/uncertainty_benchmark/evaluate_filtering_whale.yaml`.
+3. **Configuration**:
+   - The uncertainty estimation and quality metrics scripts will run with the configuration files `configs/uncertainty_benchmark/evaluate_filtering.yaml` and `configs/uncertainty_benchmark/evaluate_filtering_whale.yaml`.
 
-### Дополнительные замечания
+### Additional Notes
 
-- Убедитесь, что Docker и CUDA правильно установлены и настроены на вашей системе.
-- Убедитесь, что у вас достаточно места на диске и памяти для обработки набора данных и Docker-образа.
+- Ensure that Docker and CUDA are correctly installed and configured on your system.
+- Ensure you have sufficient disk space and memory to process the dataset and Docker image.
