@@ -2,7 +2,7 @@ import numpy as np
 from .base_method import OpenSetMethod
 from evaluation.metrics import FrrFarIdent
 from evaluation.test_datasets import FaceRecogntionDataset
-
+from scipy.special import iv
 
 from evaluation.open_set_methods.calibration_utils import prepare_calibration_dataset
 from scipy.special import ive, hyp0f1, loggamma

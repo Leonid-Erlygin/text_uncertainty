@@ -26,6 +26,8 @@ def create_table_head(result_latex_code, caption, table_lable, cfg):
     column_count = 0
     fars = [""]
     for key in used_columns:
+        if key not in cfg.datasets:
+            continue
         for column in used_columns[key]:
             if column == "models":
                 continue

@@ -23,6 +23,7 @@ def z_class_prob(class_id, z, mus, kappa, d=2, beta=0.5):
 
 
 def z_vonMises_dencity(z, mu_c, kappa, d=2):
+    print((kappa, iv(d / 2 - 1, kappa)))
     C_d = kappa ** (d / 2 - 1) / ((2 * np.pi) ** (d / 2) * iv(d / 2 - 1, kappa))
     return C_d * np.exp(kappa * np.dot(z, mu_c))
 

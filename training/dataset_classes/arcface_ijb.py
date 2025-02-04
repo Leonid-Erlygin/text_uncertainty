@@ -9,7 +9,11 @@ from torchvision import transforms
 
 class IJB_aligned_images(Dataset):
     def __init__(
-        self, dataset_path: str, dataset_name: str, norm_image: bool = False
+        self,
+        dataset_path: str,
+        dataset_name: str,
+        norm_image: bool = False,
+        extract_data=True,
     ) -> None:
         super().__init__()
         self.norm_image = norm_image
@@ -29,16 +33,17 @@ class IJB_aligned_images(Dataset):
                 transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
             ]
         )
-        (
-            self.templates,
-            self.medias,
-            self.p1,
-            self.p2,
-            self.label,
-            self.img_names,
-            self.landmarks,
-            face_scores,
-        ) = extract_meta_data(dataset_path, dataset_name)
+        if extract_data:
+            (
+                self.templates,
+                self.medias,
+                self.p1,
+                self.p2,
+                self.label,
+                self.img_names,
+                self.landmarks,
+                face_scores,
+            ) = extract_meta_data(dataset_path, dataset_name)
 
     def __getitem__(self, index):
         img = self.img_names[index]
