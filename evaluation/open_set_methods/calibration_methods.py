@@ -397,8 +397,8 @@ class Standartization:
         else:
             X_norm = (X - self.X_mean_val) / self.X_std_val
         self.draw_dencity_plot(X_norm.cpu(), error_calc, save_name)
-        predictions_perceptron = torch.sum(X_norm, dim=1)  # self.perceptron(X_norm)
-        unc = -predictions_perceptron.detach().cpu().numpy()
+        kl_sum = torch.sum(X_norm, dim=1)  # self.perceptron(X_norm)
+        unc = -kl_sum.detach().cpu().numpy()
         return unc
 
     def draw_dencity_plot(self, X_norm, error_calc, image_name):

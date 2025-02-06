@@ -23,7 +23,6 @@ def z_class_prob(class_id, z, mus, kappa, d=2, beta=0.5):
 
 
 def z_vonMises_dencity(z, mu_c, kappa, d=2):
-    print((kappa, iv(d / 2 - 1, kappa)))
     C_d = kappa ** (d / 2 - 1) / ((2 * np.pi) ** (d / 2) * iv(d / 2 - 1, kappa))
     return C_d * np.exp(kappa * np.dot(z, mu_c))
 
@@ -60,7 +59,13 @@ def draw_circle(ax, linewidth, zorder=4):
 
 
 def draw_example(
-    kappa, gallery_class_angles, text_shift, save_name, beta=0.5, unc_type="entropy"
+    kappa,
+    gallery_class_angles,
+    text_shift,
+    save_name,
+    beta=0.5,
+    unc_type="entropy",
+    draw_oog=False,
 ):
     fontsize = 20
     linewidth = 3
@@ -100,10 +105,12 @@ def draw_example(
         ax.scatter([np.cos(angle)], [np.sin(angle)], c=color, s=dot_size, zorder=5)
         ax.scatter([0], [0], color="black", s=20)
 
-    # plot_uniform_prob
     zs = get_vectors_by_angle(theta)
-    class_probes = compute_class_probs(mus.shape[1], zs, mus, kappa, beta)
-    v = zs.T * (1 + class_probes[np.newaxis, :])
+    if draw_oog:
+        # plot_uniform_prob
+        class_probes = compute_class_probs(mus.shape[1], zs, mus, kappa, beta)
+        v = zs.T * (1 + class_probes[np.newaxis, :])
+        ax.plot(v[0], v[1], c="black", linewidth=linewidth)
 
     # plot unc
     all_probs = []
@@ -165,7 +172,7 @@ def draw_example(
         fontsize=fontsize,
     )
     fig.gca().set_aspect("equal")
-    plt.savefig(save_name, dpi=300, bbox_inches="tight")
+    plt.savefig(save_name, dpi=300, bbox_inches="tight", format="pdf")
 
 
 def draw_dencity(

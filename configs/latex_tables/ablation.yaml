@@ -28,7 +28,7 @@ caption: >
   Prediction Rejection Ratio (PRR) of $F_1$ filtering curve on IJB-C dataset.
   
 fix_table: False
-table_lable: "tab:${task}"
+table_lable: "tab:${task}_ablation"
 round_num: 2
 table_size: normalsize
 tabcolsep: 6
