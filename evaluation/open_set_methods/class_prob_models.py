@@ -68,7 +68,7 @@ class FarLossCalc:
         all_prob = np.concatenate([mean_probs, oog_prob], axis=-1)
         was_rejected = np.argmax(all_prob, axis=-1) == (all_prob.shape[-1] - 1)
         far = np.mean(was_rejected[~self.is_seen] == False)
-        print(f"Found kappa {np.round(kappa,4)} for far {far}")
+        # print(f"Found kappa {np.round(kappa,4)} for far {far}")
         return -np.abs(far - self.target_far) / self.target_far
 
 
@@ -165,7 +165,7 @@ class MonteCarloPredictiveProb:
             self.gallery_kappa = golden_selection_search(
                 kappa_high, kappa_low, eps, max_iter, far_loss_func
             )
-            print(f"Found kappa {np.round(self.gallery_kappa,4)} for far {self.far}")
+            # print(f"Found kappa {np.round(self.gallery_kappa,4)} for far {self.far}")
 
         gallery_unc_scaled = np.ones_like(gallery_unc) * self.gallery_kappa
 
@@ -224,9 +224,9 @@ class MonteCarloPredictiveProb:
                 kappa_high, kappa_low, eps, max_iter, far_loss_func_calib
             )
             # calibratation_set_kappa = 519.1576
-            print(
-                f"Found kappa_calib {np.round(calibratation_set_kappa,4)} for far {self.far}"
-            )
+            # print(
+            #     f"Found kappa_calib {np.round(calibratation_set_kappa,4)} for far {self.far}"
+            # )
             gallery_unc_scaled_calib = (
                 np.ones_like(gallery_unc_calib) * calibratation_set_kappa
             )

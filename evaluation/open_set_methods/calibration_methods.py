@@ -357,13 +357,10 @@ class NNcalibration:
 
 
 class Standartization:
-    def __init__(
-        self,
-        normalize_kl_by_test=False,
-        log_dir=None,
-    ):
+    def __init__(self, normalize_kl_by_test=False, log_dir=None, vis=False):
         self.normalize_kl_by_test = normalize_kl_by_test
         self.log_dir = log_dir
+        self.vis = vis
         self.device = torch.device("cpu")
 
     def train_calibration_parameters(self, kl_1, kl_2, error_calc, save_name):
@@ -381,7 +378,8 @@ class Standartization:
         X_norm = (X - self.X_mean_val) / self.X_std_val
 
         # draw probs
-        self.draw_dencity_plot(X_norm.cpu(), error_calc, save_name)
+        if self.vis:
+            self.draw_dencity_plot(X_norm.cpu(), error_calc, save_name)
 
     def apply_calibration_transform(self, kl_1, kl_2, error_calc, save_name):
 
@@ -396,7 +394,8 @@ class Standartization:
             X_norm = (X - self.X_mean_test) / self.X_std_test
         else:
             X_norm = (X - self.X_mean_val) / self.X_std_val
-        self.draw_dencity_plot(X_norm.cpu(), error_calc, save_name)
+        if self.vis:
+            self.draw_dencity_plot(X_norm.cpu(), error_calc, save_name)
         kl_sum = torch.sum(X_norm, dim=1)  # self.perceptron(X_norm)
         unc = -kl_sum.detach().cpu().numpy()
         return unc
