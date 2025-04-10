@@ -136,8 +136,8 @@ def main(cfg):
     pretty_names = {task: {} for task in tasks_names}
 
     # 1. Compute recognition and uncertaity metrics
-    for (method, task_type), far, test_dataset in product(
-        zip(methods, method_task_type), cfg.far_list, test_datasets
+    for (method, task_type), far, beta, test_dataset in product(
+        zip(methods, method_task_type), cfg.far_list, cfg.beta_list, test_datasets
     ):
         dataset_name = test_dataset.dataset_name
 
@@ -154,6 +154,11 @@ def main(cfg):
         recognition_method = instantiate(method.recognition_method)
         # set far value
         recognition_method.far = far
+        recognition_method.beta = beta
+        if "Random" not in method.pretty_name and "Oracle" not in method.pretty_name:
+            pretty_name = method.pretty_name + f"_beta={beta}"
+        else:
+            pretty_name = method.pretty_name
         # create unique method name
         if cfg.create_pool_plot is False:
             method_name = (
@@ -162,7 +167,7 @@ def main(cfg):
                     gallery_template_pooling_strategy,
                     recognition_method,
                 )
-                + f"_{method.pretty_name}"
+                + f"_{pretty_name}"
             )
         else:
             method_name = (
@@ -171,10 +176,10 @@ def main(cfg):
                     gallery_template_pooling_strategy,
                     recognition_method,
                 )
-                + f"_{method.pretty_name}"
+                + f"_{pretty_name}"
             )
         print(method_name)
-        pretty_names[task_type][method_name] = method.pretty_name
+        pretty_names[task_type][method_name] = pretty_name
         embeddings_path = (
             Path(test_dataset.dataset_path)
             / f"embeddings/{method.embeddings}_embs_{dataset_name}.npz"
@@ -183,7 +188,7 @@ def main(cfg):
         tt = Face_Fecognition_test(
             task_type=task_type,
             method_name=method_name,
-            pretty_name=method.pretty_name,
+            pretty_name=pretty_name,
             recognition_method=recognition_method,
             test_dataset=test_dataset,
             embedding_type=method.embeddings,

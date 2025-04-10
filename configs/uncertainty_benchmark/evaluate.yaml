@@ -2,7 +2,7 @@ hydra:
   run:
     dir: ${exp_dir}
 
-exp_dir: outputs/experiments/main_filtering_results
+exp_dir: outputs/experiments/beta_ablation
 use_two_galleries: False
 recompute_template_pooling: True
 metric_pretty_name_path: /app/configs/latex_tables/pretty_names/column_pretty_name_unc.yaml
@@ -71,92 +71,12 @@ open_set_identification_uncertainty_metrics:
     metric_to_monitor:
       _target_: evaluation.metrics.F1_classic
 
-default_beta: 0.5
-far_list: [0.05] #[0.05, 0.1, 0.2] #[0.05, 0.1, 0.2] #[0.05]
+beta_list: [0.01, 0.12, 0.23, 0.34, 0.45, 0.55, 0.66, 0.77, 0.88, 0.99]
+far_list: [0.05, 0.1, 0.2] #[0.05, 0.1, 0.2] #[0.05]
 display_oracle_curve: True
 
 open_set_identification_methods:
 
-  - embeddings: pfe_2epoch
-    gallery_template_pooling_strategy:
-      _target_: evaluation.template_pooling_strategies.PoolingDefault
-    probe_template_pooling_strategy:
-      _target_: evaluation.template_pooling_strategies.PoolingDefault
-    use_detector_score: False
-    recognition_method:
-      _target_: evaluation.open_set_methods.score_function_based.SimilarityBasedPrediction
-      distance_function: 
-        _target_: evaluation.distance_functions.open_set_identification.CosineSim
-      acceptance_score: 
-        _target_: evaluation.confidence_functions.MaxSimilarity_confidence
-      uncertainty_function:
-        _target_: evaluation.open_set_methods.uncertainty_functions.BernoulliVariance
-      alpha: 1
-      calib_strategy: "norm_val"
-      #calibration_set: ${calibration_set}
-    pretty_name: "PFE"
-
-  - embeddings: scf_2epoch
-    gallery_template_pooling_strategy:
-      _target_: evaluation.template_pooling_strategies.PoolingDefault
-    probe_template_pooling_strategy:
-      _target_: evaluation.template_pooling_strategies.PoolingDefault
-    use_detector_score: False
-    recognition_method:
-      _target_: evaluation.open_set_methods.score_function_based.SimilarityBasedPrediction
-      distance_function: 
-        _target_: evaluation.distance_functions.open_set_identification.CosineSim
-      acceptance_score: 
-        _target_: evaluation.confidence_functions.MaxSimilarity_confidence
-      uncertainty_function:
-        _target_: evaluation.open_set_methods.uncertainty_functions.BernoulliVariance
-      alpha: 1
-      calib_strategy: "norm_val"
-      #calibration_set: ${calibration_set}
-    pretty_name: "SCF"
-
-  - embeddings: scf_2epoch
-    gallery_template_pooling_strategy:
-      _target_: evaluation.template_pooling_strategies.PoolingDefault
-    probe_template_pooling_strategy:
-      _target_: evaluation.template_pooling_strategies.PoolingDefault
-    use_detector_score: False
-    recognition_method:
-      _target_: evaluation.open_set_methods.score_function_based.SimilarityBasedPrediction
-      distance_function: 
-        _target_: evaluation.distance_functions.open_set_identification.CosineSim
-      acceptance_score: 
-        _target_: evaluation.confidence_functions.MaxSimilarity_confidence
-      uncertainty_function:
-        _target_: evaluation.open_set_methods.uncertainty_functions.BernoulliVariance
-      alpha: 0
-      calib_strategy: "norm_val"
-      #calibration_set: ${calibration_set}
-    pretty_name: "AccScr"
-
-  - embeddings: scf_2epoch
-    gallery_template_pooling_strategy:
-      _target_: evaluation.template_pooling_strategies.PoolingDefault  #PoolingConcentration, PoolingDefault
-    probe_template_pooling_strategy:
-      _target_: evaluation.template_pooling_strategies.PoolingDefault #PoolingProb
-    use_detector_score: False
-    recognition_method:
-      _target_: evaluation.open_set_methods.posterior_prob_based.PosteriorProbability
-      distance_function: 
-        _target_: evaluation.distance_functions.open_set_identification.CosineSim
-      class_model: vMF
-      far: ${far_list}
-      beta: ${default_beta}
-      uncertainty_type: maxprob
-      alpha: 0
-      aggregation: sum
-      T: 3
-      T_data_unc: 1
-      # calibrate_unc: True
-      # calibrate_gallery_unc: True
-      # calibration_set: ${calibration_set}
-      # calibration_embs_name: "scf_2epoch"
-    pretty_name: "GalUE"
 
   - embeddings: scf_2epoch
     gallery_template_pooling_strategy:
@@ -197,7 +117,29 @@ open_set_identification_methods:
         log_dir: ${exp_dir}
     pretty_name: "HolUE"
 
-
+  - embeddings: scf_2epoch
+    gallery_template_pooling_strategy:
+      _target_: evaluation.template_pooling_strategies.PoolingDefault  #PoolingConcentration, PoolingDefault
+    probe_template_pooling_strategy:
+      _target_: evaluation.template_pooling_strategies.PoolingDefault #PoolingProb
+    use_detector_score: False
+    recognition_method:
+      _target_: evaluation.open_set_methods.posterior_prob_based.PosteriorProbability
+      distance_function: 
+        _target_: evaluation.distance_functions.open_set_identification.CosineSim
+      class_model: vMF
+      far: ${far_list}
+      beta: 0.5
+      uncertainty_type: maxprob
+      alpha: 0
+      aggregation: sum
+      T: 3
+      T_data_unc: 1
+      # calibrate_unc: True
+      # calibrate_gallery_unc: True
+      # calibration_set: ${calibration_set}
+      # calibration_embs_name: "scf_2epoch"
+    pretty_name: "GalUE"
 
 
   - embeddings: scf_2epoch

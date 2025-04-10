@@ -335,7 +335,10 @@ class ArcFaceLoss(torch.nn.Module):
         self.m = m
 
     def forward(
-        self, cosine_logits: torch.Tensor, labels: torch.Tensor
+        self,
+        cosine_logits: torch.Tensor,
+        labels: torch.Tensor,
+        scale: torch.Tensor = None,
     ) -> torch.Tensor:
         """Compute loss function value.
 
@@ -357,21 +360,27 @@ class ArcFaceLoss(torch.nn.Module):
 
         # compute new logits according to the formulas to use CrossEntropyLoss
         diff = (target_cosine_sum - target_cosine).unsqueeze(dim=1)
-        logits = (cosine_logits + (one_hot_mask * diff)) * self.s
+        if scale is not None:
+            # print(diff.shape)
+            # print(scale.shape)
+            # print(one_hot_mask.shape)
+            logits = (cosine_logits + (one_hot_mask * diff)) * scale  # [:, None]
+        else:
+            logits = (cosine_logits + (one_hot_mask * diff)) * self.s
 
         return torch.nn.CrossEntropyLoss()(logits, labels)
 
 
-# class ArcFaceScale(nn.Module):
-#     def __init__(self, m=0.5):
-#         super(ArcFaceScale, self).__init__()
-#         self.m = m
+class ArcFaceScale(nn.Module):
+    def __init__(self, m=0.5):
+        super(ArcFaceScale, self).__init__()
+        self.m = m
 
-#     def forward(self, cosine: torch.Tensor, label, scale: torch.Tensor):
-#         index = torch.where(label != -1)[0]
-#         m_hot = torch.zeros(index.size()[0], cosine.size()[1], device=cosine.device)
-#         m_hot.scatter_(1, label[index, None], self.m)
-#         cosine.acos_()
-#         cosine[index] += m_hot
-#         cosine.cos_().mul_(scale)
-#         return cosine, index
+    def forward(self, cosine: torch.Tensor, label, scale: torch.Tensor):
+        index = torch.where(label != -1)[0]
+        m_hot = torch.zeros(index.size()[0], cosine.size()[1], device=cosine.device)
+        m_hot.scatter_(1, label[index, None], self.m)
+        cosine.acos_()
+        cosine[index] += m_hot
+        cosine.cos_().mul_(scale)
+        return cosine, index

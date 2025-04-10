@@ -42,23 +42,22 @@ class MLPHead(nn.Module):
 
     def forward(self, **kwargs):
         x: torch.Tensor = kwargs["bottleneck_feature"]
-        with torch.cuda.amp.autocast(self.fp16):
-            x = self.mlp(x)
-            if self.activation == "exp":
-                x = torch.exp(x)
-            if self.activation == "sigm":
-                x = torch.sigmoid(x)
-            if self.activation == "sigm_mul":
-                x = self.coefficient * torch.sigmoid(x)
-            if self.activation == "sigm_sum":
-                x = self.coefficient + torch.sigmoid(x)
-            if self.activation == "sigm_sum_mul":
-                x = self.coefficient + self.coefficient * torch.sigmoid(x)
-            if self.activation == "relu":
-                x = self.coefficient * F.relu(x)
-            if self.activation == "lin":
-                x = x
-        return {"scale": x}
+        x = self.mlp(x)
+        if self.activation == "exp":
+            x = torch.exp(x)
+        if self.activation == "sigm":
+            x = torch.sigmoid(x)
+        if self.activation == "sigm_mul":
+            x = self.coefficient * torch.sigmoid(x)
+        if self.activation == "sigm_sum":
+            x = self.coefficient + torch.sigmoid(x)
+        if self.activation == "sigm_sum_mul":
+            x = self.coefficient + self.coefficient * torch.sigmoid(x)
+        if self.activation == "relu":
+            x = self.coefficient * F.relu(x)
+        if self.activation == "lin":
+            x = x
+        return x  # {"scale": x}
 
 
 class DummyHead(nn.Module):
