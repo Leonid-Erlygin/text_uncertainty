@@ -155,7 +155,11 @@ def main(cfg):
         # set far value
         recognition_method.far = far
         recognition_method.beta = beta
-        if "Random" not in method.pretty_name and "Oracle" not in method.pretty_name:
+        if (
+            False
+            and "Random" not in method.pretty_name
+            and "Oracle" not in method.pretty_name
+        ):
             pretty_name = method.pretty_name + f"_beta={beta}"
         else:
             pretty_name = method.pretty_name

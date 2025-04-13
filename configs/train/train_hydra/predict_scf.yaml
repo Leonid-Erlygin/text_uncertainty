@@ -13,7 +13,7 @@ trainer:
     logging_interval: "step"
   - _target_: training.models.scf.Prediction_writer
     output_dir: /app/cache/features/ # /app/datasets/arcface_ijb/IJBB/embeddings #/app/datasets/ms1m_ident/embeddings #/app/datasets/arcface_ijb/IJBC/embeddings
-    file_name: scf_2epoch_embs_nose #scf_2epoch_embs_IJBB
+    file_name: scf_2epoch_embs_nose_test #scf_2epoch_embs_IJBB
     write_interval: epoch
   max_epochs: 2
   accelerator: gpu

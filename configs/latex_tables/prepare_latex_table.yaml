@@ -14,7 +14,7 @@ defaults:
 
 # dataset: survFace
 #dataset: IJBB
-datasets: ["IJBC", "IJBB", "whale"]
+datasets: ["IJBC"] #["IJBC", "IJBB", "whale"]
 #dataset: whale
 #task: open_set_identification
 task: filter
@@ -22,7 +22,7 @@ task: filter
 #task: closed_set_identification
 # CHANGE
 #metric_table_path: outputs/experiments/whale/open_set_identification/{dataset}/filter_tabels/f1_class_prr_filtering.csv
-metric_table_path: outputs/experiments/main_filtering_results/open_set_identification/{dataset}/filter_tabels/f1_class_prr_filtering.csv
+metric_table_path: /app/outputs/experiments/scale_face/open_set_identification/IJBC/filter_tabels/f1_class_prr_filtering.csv
 
 caption: >
   Prediction Rejection Ratios (PRR) for $F_1$ filtering curve for the three considered datasets IJB-C, IJB-B, Whale.

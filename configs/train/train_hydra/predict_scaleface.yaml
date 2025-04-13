@@ -1,11 +1,8 @@
 seed_everything: 777
-mode: train
+mode: predict
+weights_path: /app/outputs/scaleface_train/scaleface_base/last.ckpt
 trainer:
   _target_: pytorch_lightning.Trainer
-  logger:
-    _target_: pytorch_lightning.loggers.WandbLogger
-    project: "Scaleface-train"
-    name: "Test Base"
   callbacks:
   - _target_: pytorch_lightning.callbacks.ModelCheckpoint 
     #every_n_epochs: 1
@@ -14,8 +11,8 @@ trainer:
   - _target_: pytorch_lightning.callbacks.LearningRateMonitor
     logging_interval: "step"
   - _target_: training.models.scf.Prediction_writer
-    output_dir: /app/cache/features
-    file_name: scaleface
+    output_dir: /app/datasets/arcface_ijb/IJBC/embeddings
+    file_name: scaleface_embs_IJBC
     write_interval: epoch
   max_epochs: 2
   accelerator: gpu
