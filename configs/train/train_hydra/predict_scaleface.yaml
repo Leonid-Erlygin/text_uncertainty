@@ -1,6 +1,6 @@
 seed_everything: 777
 mode: predict
-weights_path: /app/outputs/scaleface_train/scaleface_base/last.ckpt
+weights_path: /app/model_weights/scale_face.ckpt
 trainer:
   _target_: pytorch_lightning.Trainer
   callbacks:

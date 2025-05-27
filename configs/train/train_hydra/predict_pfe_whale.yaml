@@ -1,6 +1,6 @@
 seed_everything: 777
 mode: predict
-weights_path: /app/outputs/pfe_train/pfe_base_whale/epoch=3-step=12756.ckpt
+weights_path: /app/model_weights/pfe_whale.ckpt
 trainer:
   _target_: pytorch_lightning.Trainer
   callbacks:
