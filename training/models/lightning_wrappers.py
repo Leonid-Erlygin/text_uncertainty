@@ -4,6 +4,14 @@ from training import models as mlib
 from training.models.whale_arcface.src.train import SphereClassifier
 
 
+class EmbModel(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def forward(self, x):
+        return x
+
+
 class EfficientNet(torch.nn.Module):
     def __init__(self, checkpoint_path: str, learnable: bool) -> None:
         super().__init__()
