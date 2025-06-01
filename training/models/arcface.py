@@ -79,27 +79,6 @@ class ArcFace_SW(LightningModule):
 
         return loss
 
-    # def forward(self, x):
-    #     backbone_outputs = self.backbone(x)
-    #     backbone_outputs = torch.nn.functional.normalize(backbone_outputs, p=2.0, dim=1)
-    #     return backbone_outputs
-
-    # def training_step(self, batch):
-    #     images, labels = batch
-
-    #     feature = self(images)
-
-    #     wc = self.softmax_weights
-    #     cosine = feature @ wc.T
-    #     new_cosine, index = self.arcface_loss(cosine, labels, 64)
-
-    #     total_loss = torch.nn.CrossEntropyLoss()(new_cosine, labels)
-
-    #     self.log("train_loss", total_loss.item(), prog_bar=True)
-    #     self.log("cos", cosine.mean().item())
-
-    #     return total_loss
-
     def configure_optimizers(self):
         optimizer = getattr(
             importlib.import_module(self.optimizer_params["optimizer_path"]),

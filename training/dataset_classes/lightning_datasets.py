@@ -7,7 +7,10 @@ import albumentations as A
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader, Dataset
 from torchvision.transforms import v2
-import mxnet as mx
+import scipy.io.wavfile as sciwav
+from python_speech_features import sigproc
+
+# import mxnet as mx
 import numbers
 from pathlib import Path
 from tqdm import tqdm
@@ -18,6 +21,7 @@ import importlib
 from albumentations.pytorch import ToTensorV2
 from training.models.whale_arcface.config.config import load_config
 from training.models.whale_arcface.src.dataset import load_df
+import glob
 
 
 class MXFaceDataset(Dataset):
@@ -260,10 +264,10 @@ class UncertaintyDataModule(pl.LightningDataModule):
     def __init__(
         self,
         train_dataset: Dataset,
-        validation_dataset: Dataset,
-        predict_dataset: Dataset,
         batch_size: int,
         num_workers: int,
+        validation_dataset: Dataset = None,
+        predict_dataset: Dataset = None,
         train_batch_sampler: Sampler = None,
     ):
         super().__init__()
@@ -421,12 +425,84 @@ class WhaleDataset(Dataset):
             return augmented, self.ids[i]
 
 
-if __name__ == "__main__":
-    num_classes = 3531
-    ds = MXFaceDataset("/app/datasets/ms1m/", True, num_classes)
-    t = ds[0]
-    gallery_size = 1772
-    # ds.create_identification_meta(Path("/app/datasets/ms1m_ident"), gallery_size)
+class VoxBlinkEmbeddingsDataset(Dataset):
+    def __init__(self, root_dir: str):
+        embs = []
+        bottlenecks = []
+        num_splits = len(list(glob.glob(f"{root_dir}/splits/*")))
+        for i in range(num_splits):
+            data = np.load(f"{root_dir}/splits/embs_vb2_{i}.npz")
+            embs.append(data["embs"])
+            bottlenecks.append(data["bottlenecks"])
+
+        self.embs = np.concatenate(embs, axis=0)
+        self.embs = self.embs / np.linalg.norm(self.embs, axis=1, keepdims=True)
+
+        self.bottlenecks = np.concatenate(bottlenecks, axis=0)
+        self.labels = np.load(f"{root_dir}/labels.npy")
+
+    def __getitem__(self, index):
+        label = torch.tensor([self.labels[index].astype("int")])
+        emb = torch.from_numpy(self.embs[index].astype("float32"))
+        bottleneck = torch.from_numpy(self.bottlenecks[index].astype("float32"))
+        return {"bottleneck_feature": bottleneck, "feature": emb}, label
+
+    def __len__(self):
+        return len(self.labels)
+
+
+class VoxBlinkDataset(Dataset):
+    def __init__(self, root_dir: str, test: bool = False):
+        super(VoxBlinkDataset, self).__init__()
+        self.root_dir = Path(root_dir)
+        self.test = test
+        self.norm_type = "std"
+        # list audio files
+        path_to_ids = self.root_dir / "audio"
+        labels_path = self.root_dir / "labels.npy"
+        paths_to_file_path = self.root_dir / "paths.npy"
+        if labels_path.is_file() and paths_to_file_path.is_file():
+            self.labels = np.load(labels_path)
+            self.paths_to_file = np.load(paths_to_file_path)
+        else:
+            paths_to_file = []
+            labels = []
+            for i, person_id in enumerate(sorted(glob.glob(str(path_to_ids) + "/*"))):
+                audio_list = list(
+                    sorted(glob.glob(str(path_to_ids / person_id) + "/*/*"))
+                )
+                paths_to_file.extend(audio_list)
+                labels.extend([i] * len(audio_list))
+            self.labels = np.array(labels)
+            self.paths_to_file = np.array(paths_to_file)
+            np.save(labels_path, self.labels)
+            np.save(paths_to_file_path, self.paths_to_file)
+
+    def _norm_speech(self, signal):
+        if np.std(signal) == 0:
+            return signal
+        if self.norm_type == "std":
+            signal = (signal - np.mean(signal)) / np.std(signal)
+        else:
+            signal = signal / (np.abs(signal).max() + 1e-4)
+        return signal
+
+    def __getitem__(self, index):
+        label = self.labels[index]
+        filename = self.paths_to_file[index]
+        # load data
+        sr, signal = sciwav.read(filename, mmap=False)
+        # norm speech
+        signal = self._norm_speech(signal)
+        signal = sigproc.preemphasis(signal, 0.97)
+        signal = torch.from_numpy(signal.astype("float32"))
+        if self.test:
+            return signal
+        else:
+            return signal, label
+
+    def __len__(self):
+        return len(self.paths_to_file)
 
 
 class VGGFaceDataset(Dataset):
@@ -541,87 +617,6 @@ class VGGFaceDataset(Dataset):
                 np.save(image_idx_path, self.imgidx)
                 np.save(self.image_label_path, self.labels)
 
-    def create_identification_meta(
-        self, identification_ds_path: Path, gallery_size: int
-    ):
-        # seed = 0
-        # rng = np.random.default_rng(seed)
-        identification_ds_path.mkdir(exist_ok=True)
-        meta_path = identification_ds_path / "meta"
-        meta_path.mkdir(exist_ok=True)
-        embeddings_path = identification_ds_path / "embeddings"
-        embeddings_path.mkdir(exist_ok=True)
-
-        num_probe_templates = 4
-        mids = np.arange(len(self.labels))
-        names = np.zeros_like(mids)
-        tids = []
-        tids_probe = []
-        tids_gallery = []
-        sids = []
-        sids_probe = []
-        sids_gallery = []
-        i = 0
-
-        (class_ids, poses, counts) = np.unique(
-            self.labels, return_index=True, return_counts=True
-        )
-        for class_id, pos, count in zip(class_ids, poses, counts):
-            sids.extend([class_id] * count)
-            sids_probe.extend(
-                [class_id] * (count // (num_probe_templates + 1)) * num_probe_templates
-            )
-            if i < gallery_size:
-                sids_gallery.extend(
-                    [class_id]
-                    * (
-                        count % (num_probe_templates + 1)
-                        + count // (num_probe_templates + 1)
-                    )
-                )
-            for j in range(num_probe_templates):
-                probe_templates = [i * (num_probe_templates + 1) + j] * (
-                    count // (num_probe_templates + 1)
-                )
-                tids.extend(probe_templates)
-                tids_probe.extend(probe_templates)
-            gallery_templates = [
-                i * (num_probe_templates + 1) + num_probe_templates
-            ] * (count % (num_probe_templates + 1) + count // (num_probe_templates + 1))
-            tids.extend(gallery_templates)
-            if i < gallery_size:
-                tids_gallery.extend(gallery_templates)
-            i += 1
-
-        # assert len(tids) == len(tids_probe) + len(tids_gallery)
-        # assert len(sids) == len(sids_probe) + len(sids_gallery)
-        assert len(np.unique(sids_gallery)) == gallery_size
-        out_file_tid_mid = meta_path / Path("ms1m_face_tid_mid.txt")
-        with open(out_file_tid_mid, "w") as fd:
-            for name, tid, sid, mid in zip(names, tids, sids, mids):
-                fd.write(f"{name} {tid} {mid} {sid}\n")
-
-        out_file_probe = meta_path / Path("ms1m_1N_probe_mixed.csv")
-        out_file_gallery = meta_path / Path("ms1m_1N_gallery_G1.csv")
-
-        probe = pd.DataFrame(
-            {
-                "TEMPLATE_ID": tids_probe,
-                "SUBJECT_ID": sids_probe,
-                "FILENAME": np.zeros_like(tids_probe),
-            }
-        )
-        gallery = pd.DataFrame(
-            {
-                "TEMPLATE_ID": tids_gallery,
-                "SUBJECT_ID": sids_gallery,
-                "FILENAME": np.zeros_like(tids_gallery),
-            }
-        )
-
-        probe.to_csv(out_file_probe, sep=",", index=False)
-        gallery.to_csv(out_file_gallery, sep=",", index=False)
-
     def __getitem__(self, index):
         idx = self.imgidx[index]
         s = self.imgrec.read_idx(idx)
@@ -642,3 +637,14 @@ class VGGFaceDataset(Dataset):
 
     def __len__(self):
         return len(self.imgidx)
+
+
+if __name__ == "__main__":
+    # num_classes = 3531
+    # ds = MXFaceDataset("/app/datasets/ms1m/", True, num_classes)
+    # t = ds[0]
+    # gallery_size = 1772
+    # ds.create_identification_meta(Path("/app/datasets/ms1m_ident"), gallery_size)
+
+    # ds = VoxBlinkDataset('/app/datasets/VB1')
+    ds = VoxBlinkDataset("/app/datasets/VB2_11/SMIIPdata1/AudioData/VoxBlink2")

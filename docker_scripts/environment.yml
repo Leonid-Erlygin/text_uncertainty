@@ -23,10 +23,15 @@ dependencies:
   - optuna-integration[pytorch_lightning]
   - pysoundfile
   - pip:
+    - torch==2.1.1
+    - python_speech_features
     - scikit-learn-intelex
     - numexpr
     - wandb
     - onnx
+    - torchaudio
+    - thop
+    - torch-summary
     - optuna
     - timm
     - onnx2torch
@@ -38,7 +43,6 @@ dependencies:
     - torchvision
     - progressbar2
     - exman
-    - torch==2.1.2
     - easydict
     - pytorch-lightning
     - opencv-python
