@@ -10,7 +10,7 @@ from torchvision.transforms import v2
 import scipy.io.wavfile as sciwav
 from python_speech_features import sigproc
 
-# import mxnet as mx
+import mxnet as mx
 import numbers
 from pathlib import Path
 from tqdm import tqdm
@@ -442,7 +442,7 @@ class VoxBlinkEmbeddingsDataset(Dataset):
         self.labels = np.load(f"{root_dir}/labels.npy")
 
     def __getitem__(self, index):
-        label = torch.tensor([self.labels[index].astype("int")])
+        label = torch.tensor(self.labels[index], dtype=torch.long)
         emb = torch.from_numpy(self.embs[index].astype("float32"))
         bottleneck = torch.from_numpy(self.bottlenecks[index].astype("float32"))
         return {"bottleneck_feature": bottleneck, "feature": emb}, label

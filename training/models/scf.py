@@ -90,6 +90,8 @@ class SphereConfidenceFace(LightningModule):
         # freezing bn layers
         feature, log_kappa = self(images)
         kappa = torch.exp(log_kappa)
+        # print(labels)
+        # print(feature[0] @ self.softmax_weights[labels[0]] / 32)
         wc = self.softmax_weights[labels, :]
         losses, l1, l2, l3, cos = self.scf_loss(feature, kappa, wc)
 

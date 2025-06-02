@@ -5,7 +5,7 @@ trainer:
   logger:
     _target_: pytorch_lightning.loggers.WandbLogger
     project: "SCF-VB2"
-    name: "Test"
+    name: "Base"
   callbacks:
   - _target_: pytorch_lightning.callbacks.ModelCheckpoint 
     every_n_epochs: 1
@@ -30,7 +30,7 @@ model:
     backbone:
         _target_: training.models.lightning_wrappers.EmbModel
     head:
-        _target_: training.models.pheads.SCFHead
+        _target_: training.models.heads.SCFHead
         convf_dim: 1024
         latent_vector_size: 4096
     scf_loss:

@@ -6,7 +6,8 @@ channels:
   - defaults
 dependencies:
   - psutil
-  - python=3.11
+  - ipykernel
+  - python=3.9.7
   - conda-forge::scikit-image
   - conda-forge::termcolor
   - conda-forge::tensorboard
@@ -44,14 +45,14 @@ dependencies:
     - progressbar2
     - exman
     - easydict
-    - pytorch-lightning
+    - pytorch-lightning==2.0.0
     - opencv-python
-    - mxnet-mkl
+    - mxnet-mkl==1.6.0
     - bcolz-zipline
     - "dask[array]"
     - botorch
     - plotly
-    - numpy
+    - numpy==1.23.1
     - PyYAML
     - scipy
     - pydrive2

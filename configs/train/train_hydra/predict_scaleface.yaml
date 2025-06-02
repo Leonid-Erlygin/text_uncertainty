@@ -10,9 +10,12 @@ trainer:
     save_last: True
   - _target_: pytorch_lightning.callbacks.LearningRateMonitor
     logging_interval: "step"
+#   - _target_: training.models.scf.Prediction_writer
+#     output_dir: /app/datasets/arcface_ijb/IJBC/embeddings
+#     file_name: scaleface_embs_IJBC
   - _target_: training.models.scf.Prediction_writer
-    output_dir: /app/datasets/arcface_ijb/IJBC/embeddings
-    file_name: scaleface_embs_IJBC
+    output_dir: /app/datasets/arcface_ijb/IJBB/embeddings
+    file_name: scaleface_embs_IJBB
     write_interval: epoch
   max_epochs: 2
   accelerator: gpu
@@ -102,9 +105,13 @@ data:
         norm_image: True
 
     predict_dataset:
+        # _target_: training.dataset_classes.arcface_ijb.IJB_aligned_images
+        # dataset_path: /app/datasets/arcface_ijb/IJBC
+        # dataset_name: IJBC
+        # norm_image: True
         _target_: training.dataset_classes.arcface_ijb.IJB_aligned_images
-        dataset_path: /app/datasets/arcface_ijb/IJBC
-        dataset_name: IJBC
+        dataset_path: /app/datasets/arcface_ijb/IJBB
+        dataset_name: IJBB
         norm_image: True
     batch_size: 420
     num_workers: 38

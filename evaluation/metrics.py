@@ -166,9 +166,9 @@ class CalibrationPlot:
         bins = np.linspace(0.0, 1.0, self.num_bins + 1)
         indices = np.digitize(predicted_conf, bins, right=True)
 
-        bin_accuracies = np.zeros(self.num_bins, dtype=np.float)
-        bin_confidences = np.zeros(self.num_bins, dtype=np.float)
-        bin_counts = np.zeros(self.num_bins, dtype=np.int)
+        bin_accuracies = np.zeros(self.num_bins, dtype=np.float64)
+        bin_confidences = np.zeros(self.num_bins, dtype=np.float64)
+        bin_counts = np.zeros(self.num_bins, dtype=np.int64)
 
         for b in range(self.num_bins):
             selected = np.where(indices == b + 1)[0]
