@@ -5,42 +5,34 @@ trainer:
   logger:
     _target_: pytorch_lightning.loggers.WandbLogger
     project: "SCF-VB2"
-    name: "SCF-Base"
+    name: "PFE-Base"
   callbacks:
   - _target_: pytorch_lightning.callbacks.ModelCheckpoint 
     every_n_epochs: 1
-    dirpath: outputs/scf_vb2
+    dirpath: outputs/pfe_vb2
     save_last: True
   - _target_: pytorch_lightning.callbacks.LearningRateMonitor
     logging_interval: "step"
-  - _target_: training.models.scf.Prediction_writer
-    output_dir: /app/cache/features
-    file_name: scf_vb2
-    write_interval: epoch
   max_epochs: 2
   accelerator: gpu
   devices: 1
   num_sanity_val_steps: 0
   log_every_n_steps: 3
-  default_root_dir: outputs/scf_vb2
+  default_root_dir: outputs/pfe_vb2
   val_check_interval: 0.1
   enable_checkpointing: true
 model:
-    _target_: training.models.scf.SphereConfidenceFace
+    _target_: training.models.pfe.ProbabilisticFaceEmbedding
     backbone:
         _target_: training.models.lightning_wrappers.EmbModel
     head:
-        _target_: training.models.heads.SCFHead
-        convf_dim: 1024
-        latent_vector_size: 4096
-    scf_loss:
-        _target_: training.models.losses.KLDiracVMF
-        z_dim: 256
-        radius: 32
-    softmax_weights:
-        _target_: training.models.scf.SoftmaxWeights
-        softmax_weights_path: "/app/datasets/VB2_11_embs/softmax_weight.pt"
-        radius: 32
+        _target_: training.models.heads.PFEHeadAdjustableLightning
+        in_feat: 1024
+        out_feat: 256
+        learnable: True
+    pfe_loss:
+        _target_: training.models.losses.PFELoss
+        mean: True
     optimizer_params:
         optimizer_path: torch.optim
         optimizer_name: AdamW
@@ -54,7 +46,7 @@ model:
             #     gamma: 0.1
         scheduler: OneCycleLR
         params:
-            max_lr: 3e-3
+            max_lr: 3e-2
             steps_per_epoch: 2629
             epochs: 2
             div_factor: 1e1

@@ -234,7 +234,7 @@ class PFELoss(FaceModule):
         loss_mat = -MLS()(features, log_sigma_sq)
         gty_mask = (torch.eq(gty[:, None], gty[None, :])).int()
         pos_mask = (non_diag_mask * gty_mask) > 0
-        print(f"num pos pairs{loss_mat[pos_mask].shape}")
+        # print(f"num pos pairs{loss_mat[pos_mask].shape}")
         pos_loss = loss_mat[pos_mask].mean()
         return pos_loss
 
