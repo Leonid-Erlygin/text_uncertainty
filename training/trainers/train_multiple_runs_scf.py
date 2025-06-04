@@ -21,7 +21,7 @@ def train_model(cfg):
     trainer = instantiate(cfg.trainer)
     model = instantiate(cfg.model)
     if hasattr(cfg, "weights_path"):
-        checkpoint = torch.load(cfg.weights_path, weights_only=True)
+        checkpoint = torch.load(cfg.weights_path, weights_only=False)
         model.load_state_dict(checkpoint["state_dict"])
     dataclass = instantiate(cfg.data)
 

@@ -431,7 +431,11 @@ class VoxBlinkEmbeddingsDataset(Dataset):
         bottlenecks = []
         num_splits = len(list(glob.glob(f"{root_dir}/splits/*")))
         for i in range(num_splits):
-            data = np.load(f"{root_dir}/splits/embs_vb2_{i}.npz")
+            chunk_path = Path(f"{root_dir}/splits/embs_{i}.npz")
+            if chunk_path.is_file():
+                data = np.load(chunk_path)
+            else:
+                data = np.load(f"{root_dir}/splits/embs_vb2_{i}.npz")
             embs.append(data["embs"])
             bottlenecks.append(data["bottlenecks"])
 
