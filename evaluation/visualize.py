@@ -12,12 +12,12 @@ def plot_rejection_scores(
 ):
     import matplotlib.pyplot as plt
 
-    font = {
-        "family": "normal",
-        #'weight' : 'bold',
-        "size": 16,
-    }
-    matplotlib.rc("font", **font)
+    # font = {
+    #     "family": "normal",
+    #     #'weight' : 'bold',
+    #     "size": 16,
+    # }
+    # matplotlib.rc("font", **font)
 
     fig = plt.figure()
     rejection_metric_values = []

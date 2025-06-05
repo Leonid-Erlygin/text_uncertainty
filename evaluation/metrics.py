@@ -290,6 +290,7 @@ class ErrorDistribution:
             hue="Error Kind",
             log_scale=log_scale,
             common_norm=False,
+            warn_singular=False,
         )
         plt.xlabel(f"{method_name} score")
         plt.savefig(out_path, dpi=300)
