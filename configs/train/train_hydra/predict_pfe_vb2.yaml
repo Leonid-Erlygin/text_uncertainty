@@ -1,18 +1,13 @@
 seed_everything: 777
-mode: train
+mode: predict
+weights_path: /app/model_weights/pfe_vb2/pfe_vb2.ckpt
 trainer:
   _target_: pytorch_lightning.Trainer
-  logger:
-    _target_: pytorch_lightning.loggers.WandbLogger
-    project: "SCF-VB2"
-    name: "PFE-Base"
   callbacks:
-  - _target_: pytorch_lightning.callbacks.ModelCheckpoint 
-    every_n_epochs: 1
-    dirpath: outputs/pfe_vb2
-    save_last: True
-  - _target_: pytorch_lightning.callbacks.LearningRateMonitor
-    logging_interval: "step"
+  - _target_: training.models.scf.Prediction_writer
+    output_dir: /app/datasets/vb-clean_ident
+    file_name: pfe_vb2
+    write_interval: epoch
   max_epochs: 2
   accelerator: gpu
   devices: 1
@@ -56,6 +51,9 @@ data:
     train_dataset:
         _target_: training.dataset_classes.lightning_datasets.VoxBlinkEmbeddingsDataset
         root_dir: /app/datasets/VB2_11_embs
+    predict_dataset:
+        _target_: training.dataset_classes.lightning_datasets.VoxBlinkEmbeddingsDataset
+        root_dir: /app/datasets/VB1_embs
 
     batch_size: 1060
     num_workers: 20

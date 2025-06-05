@@ -43,10 +43,6 @@ model:
             lr: 3e-2 #3e-5
             weight_decay: 5e-4
     scheduler_params:
-            # scheduler: StepLR
-            # params:
-            #     step_size: 2
-            #     gamma: 0.1
         scheduler: OneCycleLR
         params:
             max_lr: 3e-3

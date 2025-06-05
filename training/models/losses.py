@@ -361,10 +361,7 @@ class ArcFaceLoss(torch.nn.Module):
         # compute new logits according to the formulas to use CrossEntropyLoss
         diff = (target_cosine_sum - target_cosine).unsqueeze(dim=1)
         if scale is not None:
-            # print(diff.shape)
-            # print(scale.shape)
-            # print(one_hot_mask.shape)
-            logits = (cosine_logits + (one_hot_mask * diff)) * scale  # [:, None]
+            logits = (cosine_logits + (one_hot_mask * diff)) * scale
         else:
             logits = (cosine_logits + (one_hot_mask * diff)) * self.s
 

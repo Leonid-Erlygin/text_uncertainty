@@ -49,8 +49,8 @@ class ScaleFace(LightningModule):
         scaleface_loss: torch.nn.Module,
         optimizer_params,
         scheduler_params,
-        softmax_weights: torch.nn.Module,
         permute_batch: bool,
+        softmax_weights: torch.nn.Module = None,
         validation_dataset=None,
         template_pooling_strategy=None,
         recognition_method=None,
@@ -63,7 +63,17 @@ class ScaleFace(LightningModule):
         self.backbone.eval()
         self.head = head
         self.scaleface_loss = scaleface_loss
-        self.softmax_weights = softmax_weights.softmax_weights
+        if softmax_weights is None:
+            # assume that weights are stored in the backbone as in case of whale dataset
+            self.softmax_weights = self.backbone.backbone.head_id.weight.data
+            delattr(self.backbone.backbone, "head_id")
+            softmax_weights_norm = torch.norm(self.softmax_weights, dim=1, keepdim=True)
+            self.softmax_weights = self.softmax_weights / softmax_weights_norm
+            self.softmax_weights = torch.nn.Parameter(
+                self.softmax_weights, requires_grad=False
+            )
+        else:
+            self.softmax_weights = softmax_weights.softmax_weights
 
         self.optimizer_params = optimizer_params
         self.scheduler_params = scheduler_params
@@ -92,9 +102,7 @@ class ScaleFace(LightningModule):
         # freezing bn layers
         feature, scale = self(images)
         logits = F.linear(feature, self.softmax_weights)
-        loss = self.scaleface_loss(
-            logits, labels, scale
-        )  # losses, l1, l2, l3, cos = self.scaleface_loss(logits, labels, scale)
+        loss = self.scaleface_loss(logits, labels, scale)
 
         scale_mean = scale.mean()
         total_loss = loss.mean()

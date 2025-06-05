@@ -48,8 +48,8 @@ class SphereConfidenceFace(LightningModule):
         scf_loss: torch.nn.Module,
         optimizer_params,
         scheduler_params,
-        softmax_weights: torch.nn.Module,
         permute_batch: bool,
+        softmax_weights: torch.nn.Module = None,
         validation_dataset=None,
         template_pooling_strategy=None,
         recognition_method=None,
@@ -62,6 +62,20 @@ class SphereConfidenceFace(LightningModule):
         self.backbone.eval()
         self.head = head
         self.scf_loss = scf_loss
+        # bad style code:
+        if softmax_weights is None:
+            # assume that weights are stored in the backbone as in case of whale dataset
+            self.softmax_weights = self.backbone.backbone.head_id.weight.data
+            delattr(self.backbone.backbone, "head_id")
+            softmax_weights_norm = torch.norm(self.softmax_weights, dim=1, keepdim=True)
+            self.softmax_weights = (
+                self.softmax_weights / softmax_weights_norm * scf_loss.radius
+            )
+            self.softmax_weights = torch.nn.Parameter(
+                self.softmax_weights, requires_grad=False
+            )
+        else:
+            self.softmax_weights = softmax_weights.softmax_weights
         self.softmax_weights = softmax_weights.softmax_weights
 
         self.optimizer_params = optimizer_params
