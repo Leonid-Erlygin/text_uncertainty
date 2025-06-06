@@ -11,4 +11,4 @@ docker run \
  --gpus '"device=5"' \
  -w="/app" \
  ${USER}_$(basename $(dirname "$PWD")) \
- python3 training/trainers/train_multiple_runs_scf.py -cn=predict_scaleface_whale_emb_model
+ python3 training/trainers/train_multiple_runs_scf.py -cn=predict_scf_whale_emb_model # -cn=predict_scaleface_whale_emb_model

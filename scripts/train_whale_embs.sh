@@ -12,4 +12,4 @@ docker run \
  --gpus '"device=5"' \
  -w="/app" \
  ${USER}_$(basename $(dirname "$PWD")) \
- python3 training/trainers/train_multiple_runs_scf.py -cn=train_scaleface_whale_embs
+ python3 training/trainers/train_multiple_runs_scf.py -cn=train_scf_whale_embs #-cn=train_scaleface_whale_embs

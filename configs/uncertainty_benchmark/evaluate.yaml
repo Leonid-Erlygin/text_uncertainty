@@ -83,6 +83,24 @@ display_oracle_curve: True
 
 open_set_identification_methods:
 
+  - embeddings: scaleface_big_batch
+    gallery_template_pooling_strategy:
+      _target_: evaluation.template_pooling_strategies.PoolingDefault
+    probe_template_pooling_strategy:
+      _target_: evaluation.template_pooling_strategies.PoolingDefault
+    use_detector_score: False
+    recognition_method:
+      _target_: evaluation.open_set_methods.score_function_based.SimilarityBasedPrediction
+      distance_function: 
+        _target_: evaluation.distance_functions.open_set_identification.CosineSim
+      acceptance_score: 
+        _target_: evaluation.confidence_functions.MaxSimilarity_confidence
+      uncertainty_function:
+        _target_: evaluation.open_set_methods.uncertainty_functions.BernoulliVariance
+      alpha: 1
+      calib_strategy: "norm_val"
+    pretty_name: "Scaleface bigger Batch"
+
   - embeddings: scaleface_2epoch
     gallery_template_pooling_strategy:
       _target_: evaluation.template_pooling_strategies.PoolingDefault
@@ -101,6 +119,43 @@ open_set_identification_methods:
       calib_strategy: "norm_val"
     pretty_name: "Scaleface"
 
+  - embeddings: scf_big_batch
+    gallery_template_pooling_strategy:
+      _target_: evaluation.template_pooling_strategies.PoolingDefault
+    probe_template_pooling_strategy:
+      _target_: evaluation.template_pooling_strategies.PoolingDefault
+    use_detector_score: False
+    recognition_method:
+      _target_: evaluation.open_set_methods.score_function_based.SimilarityBasedPrediction
+      distance_function: 
+        _target_: evaluation.distance_functions.open_set_identification.CosineSim
+      acceptance_score: 
+        _target_: evaluation.confidence_functions.MaxSimilarity_confidence
+      uncertainty_function:
+        _target_: evaluation.open_set_methods.uncertainty_functions.BernoulliVariance
+      alpha: 1
+      calib_strategy: "norm_val"
+    pretty_name: "SCF bigger Batch"
+
+  - embeddings: scf
+    gallery_template_pooling_strategy:
+      _target_: evaluation.template_pooling_strategies.PoolingDefault
+    probe_template_pooling_strategy:
+      _target_: evaluation.template_pooling_strategies.PoolingDefault
+    use_detector_score: False
+    recognition_method:
+      _target_: evaluation.open_set_methods.score_function_based.SimilarityBasedPrediction
+      distance_function: 
+        _target_: evaluation.distance_functions.open_set_identification.CosineSim
+      acceptance_score: 
+        _target_: evaluation.confidence_functions.MaxSimilarity_confidence
+      uncertainty_function:
+        _target_: evaluation.open_set_methods.uncertainty_functions.BernoulliVariance
+      alpha: 1
+      calib_strategy: "norm_val"
+    pretty_name: "SCF"
+
+
   # - embeddings: pfe_2epoch
   #   gallery_template_pooling_strategy:
   #     _target_: evaluation.template_pooling_strategies.PoolingDefault
@@ -118,25 +173,6 @@ open_set_identification_methods:
   #     alpha: 1
   #     calib_strategy: "norm_val"
   #   pretty_name: "PFE"
-
-  # - embeddings: scf
-  #   gallery_template_pooling_strategy:
-  #     _target_: evaluation.template_pooling_strategies.PoolingDefault
-  #   probe_template_pooling_strategy:
-  #     _target_: evaluation.template_pooling_strategies.PoolingDefault
-  #   use_detector_score: False
-  #   recognition_method:
-  #     _target_: evaluation.open_set_methods.score_function_based.SimilarityBasedPrediction
-  #     distance_function: 
-  #       _target_: evaluation.distance_functions.open_set_identification.CosineSim
-  #     acceptance_score: 
-  #       _target_: evaluation.confidence_functions.MaxSimilarity_confidence
-  #     uncertainty_function:
-  #       _target_: evaluation.open_set_methods.uncertainty_functions.BernoulliVariance
-  #     alpha: 1
-  #     calib_strategy: "norm_val"
-  #   pretty_name: "SCF"
-
   # - embeddings: scf
   #   gallery_template_pooling_strategy:
   #     _target_: evaluation.template_pooling_strategies.PoolingDefault
