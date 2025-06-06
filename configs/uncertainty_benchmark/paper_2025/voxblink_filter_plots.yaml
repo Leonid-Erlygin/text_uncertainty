@@ -2,7 +2,7 @@ hydra:
   run:
     dir: ${exp_dir}
 
-exp_dir: outputs/experiments/main_filtering_results
+exp_dir: outputs/experiments/vb2
 use_two_galleries: False
 recompute_template_pooling: True
 metric_pretty_name_path: /app/configs/latex_tables/pretty_names/column_pretty_name_unc.yaml
@@ -13,12 +13,32 @@ test_datasets:
   #   dataset_name: ms1m
   #   dataset_path: /app/datasets/ms1m_ident
 
+
+  # - _target_: evaluation.test_datasets.FaceRecogntionDataset
+  #   dataset_name: medium_1.2k-perspk1
+  #   dataset_path: /app/datasets/vb-clean_ident/Medium_1.2k/perspk1
+
+  # - _target_: evaluation.test_datasets.FaceRecogntionDataset
+  #   dataset_name: medium_1.2k-perspk5
+  #   dataset_path: /app/datasets/vb-clean_ident/Medium_1.2k/perspk5
+
+  - _target_: evaluation.test_datasets.FaceRecogntionDataset
+    dataset_name: large_12k-perspk5
+    dataset_path: /app/datasets/vb-clean_ident/Large_12k/perspk5
+
+
+  # - _target_: evaluation.test_datasets.FaceRecogntionDataset
+  #   dataset_name: large_12k-perspk5
+  #   dataset_path: /app/datasets/vb-clean_ident/Large_12k/perspk5
+
+  # - _target_: evaluation.test_datasets.FaceRecogntionDataset
+  #   dataset_name: small_120-perspk1
+  #   dataset_path: /app/datasets/vb-clean_ident/Small_120/perspk1
+
   # - _target_: evaluation.test_datasets.FaceRecogntionDataset
   #   dataset_name: IJBB
   #   dataset_path: /app/datasets/arcface_ijb/IJBB
-  - _target_: evaluation.test_datasets.FaceRecogntionDataset
-    dataset_name: whale
-    dataset_path: /app/datasets/whale
+
   # - _target_: evaluation.test_datasets.FaceRecogntionDataset
   #   dataset_name: IJBC
   #   dataset_path: /app/datasets/arcface_ijb/IJBC
@@ -35,11 +55,8 @@ test_datasets:
 
 calibration_set:
   _target_: evaluation.test_datasets.FaceRecogntionDataset
-  dataset_name: whale_val
-  dataset_path: /app/datasets/whale_val
-  # _target_: evaluation.test_datasets.FaceRecogntionDataset
-  # dataset_name: ms1m
-  # dataset_path: /app/datasets/ms1m_ident
+  dataset_name: ms1m
+  dataset_path: /app/datasets/ms1m_ident
   # _target_: evaluation.test_datasets.FaceRecogntionDataset
   # dataset_name: IJBC
   # dataset_path: /app/datasets/arcface_ijb/IJBC
@@ -49,14 +66,13 @@ open_set_identification_metrics:
   - _target_: evaluation.metrics.ErrorDistribution
     plot_save_dir: ${exp_dir}
     value_types: [0, 1, 2, 3, 4, 5]
-  - _target_: evaluation.metrics.CalibrationPlot
-    num_bins: 20
-    plot_save_dir: ${exp_dir}/calibration_plots
-    draw_ece: True
-    draw_bin_importance: True
-    draw_averages: True
-    draw_confidence: True
-    figsize: [6, 6]
+  # - _target_: evaluation.metrics.CalibrationPlot
+  #   num_bins: 20
+  #   plot_save_dir: ${exp_dir}/calibration_plots
+  #   draw_ece: True
+  #   draw_bin_importance: True
+  #   draw_averages: True
+  #   figsize: [6, 6]
   - _target_: evaluation.metrics.FnirFpir
 
 fractions: [0, 0.5, 20]
@@ -78,12 +94,12 @@ open_set_identification_uncertainty_metrics:
       _target_: evaluation.metrics.F1_classic
 
 beta_list: [0.5]
-far_list: [0.05, 0.1, 0.2]
+far_list: [0.01, 0.05, 0.1] #[0.05, 0.1, 0.2] #[0.05, 0.1, 0.2] #[0.05]
 display_oracle_curve: True
 
 open_set_identification_methods:
 
-  - embeddings: scaleface_2epoch
+  - embeddings: scaleface_vb2
     gallery_template_pooling_strategy:
       _target_: evaluation.template_pooling_strategies.PoolingDefault
     probe_template_pooling_strategy:
@@ -99,63 +115,46 @@ open_set_identification_methods:
         _target_: evaluation.open_set_methods.uncertainty_functions.BernoulliVariance
       alpha: 1
       calib_strategy: "norm_val"
-    pretty_name: "Scaleface"
+    pretty_name: "ScaleFace"
 
-  # - embeddings: pfe_2epoch
-  #   gallery_template_pooling_strategy:
-  #     _target_: evaluation.template_pooling_strategies.PoolingDefault
-  #   probe_template_pooling_strategy:
-  #     _target_: evaluation.template_pooling_strategies.PoolingDefault
-  #   use_detector_score: False
-  #   recognition_method:
-  #     _target_: evaluation.open_set_methods.score_function_based.SimilarityBasedPrediction
-  #     distance_function: 
-  #       _target_: evaluation.distance_functions.open_set_identification.CosineSim
-  #     acceptance_score: 
-  #       _target_: evaluation.confidence_functions.MaxSimilarity_confidence
-  #     uncertainty_function:
-  #       _target_: evaluation.open_set_methods.uncertainty_functions.BernoulliVariance
-  #     alpha: 1
-  #     calib_strategy: "norm_val"
-  #   pretty_name: "PFE"
 
-  # - embeddings: scf
-  #   gallery_template_pooling_strategy:
-  #     _target_: evaluation.template_pooling_strategies.PoolingDefault
-  #   probe_template_pooling_strategy:
-  #     _target_: evaluation.template_pooling_strategies.PoolingDefault
-  #   use_detector_score: False
-  #   recognition_method:
-  #     _target_: evaluation.open_set_methods.score_function_based.SimilarityBasedPrediction
-  #     distance_function: 
-  #       _target_: evaluation.distance_functions.open_set_identification.CosineSim
-  #     acceptance_score: 
-  #       _target_: evaluation.confidence_functions.MaxSimilarity_confidence
-  #     uncertainty_function:
-  #       _target_: evaluation.open_set_methods.uncertainty_functions.BernoulliVariance
-  #     alpha: 1
-  #     calib_strategy: "norm_val"
-  #   pretty_name: "SCF"
+  - embeddings: pfe_vb2
+    gallery_template_pooling_strategy:
+      _target_: evaluation.template_pooling_strategies.PoolingDefault
+    probe_template_pooling_strategy:
+      _target_: evaluation.template_pooling_strategies.PoolingDefault
+    use_detector_score: False
+    recognition_method:
+      _target_: evaluation.open_set_methods.score_function_based.SimilarityBasedPrediction
+      distance_function: 
+        _target_: evaluation.distance_functions.open_set_identification.CosineSim
+      acceptance_score: 
+        _target_: evaluation.confidence_functions.MaxSimilarity_confidence
+      uncertainty_function:
+        _target_: evaluation.open_set_methods.uncertainty_functions.BernoulliVariance
+      alpha: 1
+      calib_strategy: "norm_val"
+    pretty_name: "PFE"
 
-  # - embeddings: scf
-  #   gallery_template_pooling_strategy:
-  #     _target_: evaluation.template_pooling_strategies.PoolingDefault
-  #   probe_template_pooling_strategy:
-  #     _target_: evaluation.template_pooling_strategies.PoolingDefault
-  #   use_detector_score: False
-  #   recognition_method:
-  #     _target_: evaluation.open_set_methods.score_function_based.SimilarityBasedPrediction
-  #     distance_function: 
-  #       _target_: evaluation.distance_functions.open_set_identification.CosineSim
-  #     acceptance_score: 
-  #       _target_: evaluation.confidence_functions.MaxSimilarity_confidence
-  #     uncertainty_function:
-  #       _target_: evaluation.open_set_methods.uncertainty_functions.BernoulliVariance
-  #     alpha: 0
-  #     calib_strategy: "norm_val"
-  #   pretty_name: "AccScr"
+  - embeddings: scf_vb2
+    gallery_template_pooling_strategy:
+      _target_: evaluation.template_pooling_strategies.PoolingDefault
+    probe_template_pooling_strategy:
+      _target_: evaluation.template_pooling_strategies.PoolingDefault
+    use_detector_score: False
+    recognition_method:
+      _target_: evaluation.open_set_methods.score_function_based.SimilarityBasedPrediction
+      distance_function: 
+        _target_: evaluation.distance_functions.open_set_identification.CosineSim
+      acceptance_score: 
+        _target_: evaluation.confidence_functions.MaxSimilarity_confidence
+      uncertainty_function:
+        _target_: evaluation.open_set_methods.uncertainty_functions.BernoulliVariance
+      alpha: 1
+      calib_strategy: "norm_val"
+    pretty_name: "SCF"
 
-  # - embeddings: scf
+  # - embeddings: scf_vb2
   #   gallery_template_pooling_strategy:
   #     _target_: evaluation.template_pooling_strategies.PoolingDefault  #PoolingConcentration, PoolingDefault
   #   probe_template_pooling_strategy:
@@ -167,20 +166,15 @@ open_set_identification_methods:
   #       _target_: evaluation.distance_functions.open_set_identification.CosineSim
   #     class_model: vMF
   #     far: ${far_list}
-  #     beta: ${default_beta}
+  #     beta: 0.5
   #     uncertainty_type: maxprob
   #     alpha: 0
   #     aggregation: sum
-  #     T: 3
+  #     T: 5
   #     T_data_unc: 1
-  #     # calibrate_unc: True
-  #     # calibrate_gallery_unc: True
-  #     # calibration_set: ${calibration_set}
-  #     # calibration_embs_name: "scf"
   #   pretty_name: "GalUE"
 
-
-  # - embeddings: scf
+  # - embeddings: scf_2epoch
   #   gallery_template_pooling_strategy:
   #     _target_: evaluation.template_pooling_strategies.PoolingDefault  #PoolingConcentration, PoolingDefault
   #   probe_template_pooling_strategy:
@@ -198,7 +192,7 @@ open_set_identification_methods:
   #     pred_uncertainty_type: entropy
   #     far: ${far_list}
   #     calibration_set: ${calibration_set}
-  #     calibration_embs_name: scf
+  #     calibration_embs_name: scf_2epoch
   #     calibration_transform:
   #       _target_: evaluation.open_set_methods.calibration_methods.NNcalibration
   #       hidden_size: 6
@@ -222,7 +216,7 @@ open_set_identification_methods:
 
 
 
-  - embeddings: scf
+  - embeddings: scf_vb2
     gallery_template_pooling_strategy:
       _target_: evaluation.template_pooling_strategies.PoolingDefault
     probe_template_pooling_strategy:
@@ -240,7 +234,7 @@ open_set_identification_methods:
     pretty_name: "Random"
 
 
-  - embeddings: scf
+  - embeddings: scf_vb2
     gallery_template_pooling_strategy:
       _target_: evaluation.template_pooling_strategies.PoolingDefault
     probe_template_pooling_strategy:
@@ -262,7 +256,7 @@ open_set_identification_methods:
 
 
 
-  # - embeddings: scf
+  # - embeddings: scf_2epoch
   #   gallery_template_pooling_strategy:
   #     _target_: evaluation.template_pooling_strategies.PoolingDefault
   #   probe_template_pooling_strategy:
@@ -278,10 +272,14 @@ open_set_identification_methods:
   #       _target_: evaluation.open_set_methods.uncertainty_functions.BernoulliVariance
   #     alpha: 0.5
   #     calibration_set: ${calibration_set}
-  #     embs_name: scf
+  #     embs_name: scf_2epoch
   #   pretty_name: "$u_{baseline} + u_{SCF}$"
 
-  # - embeddings: scf
+
+
+
+
+  # - embeddings: scf_2epoch
   #   gallery_template_pooling_strategy:
   #     _target_: evaluation.template_pooling_strategies.PoolingDefault  #PoolingConcentration, PoolingDefault
   #   probe_template_pooling_strategy:
@@ -303,11 +301,7 @@ open_set_identification_methods:
   #     calibrate_unc: True
   #     calibrate_gallery_unc: True
   #     calibration_set: ${calibration_set}
-  #     calibration_embs_name: "scf"
+  #     calibration_embs_name: "scf_2epoch"
   #   pretty_name: "$u_{prob} + u_{SCF}$"
-
-
-
-
 
 

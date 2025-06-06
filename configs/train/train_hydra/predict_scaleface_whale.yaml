@@ -1,21 +1,12 @@
 seed_everything: 777
-mode: train
+mode: predict
+weights_path: /app/outputs/scaleface_whale/epoch=1-step=6378.ckpt
 trainer:
   _target_: pytorch_lightning.Trainer
-  logger:
-    _target_: pytorch_lightning.loggers.WandbLogger
-    project: "Whale-train"
-    name: "ScaleFace"
   callbacks:
-  - _target_: pytorch_lightning.callbacks.ModelCheckpoint 
-    every_n_epochs: 1
-    dirpath: outputs/scaleface_whale
-    save_last: True
-  - _target_: pytorch_lightning.callbacks.LearningRateMonitor
-    logging_interval: "step"
   - _target_: training.models.scf.Prediction_writer
-    output_dir: /app/cache/features
-    file_name: scaleface_whale
+    output_dir: /app/cache/features/ 
+    file_name: scaleface_embs_whale
     write_interval: epoch
   max_epochs: 2
   accelerator: gpu
@@ -54,13 +45,11 @@ model:
         interval: step
     permute_batch: False
 
-
 data:
     _target_: training.dataset_classes.lightning_datasets.UncertaintyDataModule
     train_dataset:
-        _target_: training.dataset_classes.lightning_datasets.WhaleDataset    
-        config_path: /app/training/models/whale_arcface/config/efficientnet_b6_new.yaml
-        image_dir: /app/datasets/whale_images
+        _target_: training.dataset_classes.lightning_datasets.MXFaceDataset
+        root_dir: /app/datasets/ms1m/
     validation_dataset:
         _target_: training.dataset_classes.arcface_ijb.IJB_aligned_images
         dataset_path: /app/datasets/arcface_ijb/IJBC
@@ -72,6 +61,5 @@ data:
         config_path: /app/training/models/whale_arcface/config/efficientnet_b6_new.yaml
         image_dir: /app/datasets/whale_images
         test: True
-
     batch_size: 16
     num_workers: 8
