@@ -41,13 +41,14 @@ class FarLossCalc:
         all_classes_log_prob = posterior_prob.compute_all_class_log_probabilities(
             self.similarity_matrix, self.T
         )
+        print(all_classes_log_prob.min())
         all_classes_log_prob = torch.mean(all_classes_log_prob, dim=1).numpy()
         was_rejected = np.argmax(all_classes_log_prob, axis=-1) == (
             all_classes_log_prob.shape[-1] - 1
         )
         far = np.mean(was_rejected[~self.is_seen] == False)
         print(f"Found kappa {np.round(kappa,4)} for far {far}")
-        return -np.abs(far - self.target_far)
+        return -np.abs(far - self.target_far) / self.target_far
 
 
 class PosteriorProbability(OpenSetMethod):
@@ -125,10 +126,10 @@ class PosteriorProbability(OpenSetMethod):
         is_seen = np.isin(probe_unique_ids, g_unique_ids)
 
         if self.gallery_kappa is None:
-            kappa_low = 300
-            kappa_high = 2500
-            max_iter = 30
-            eps = 0.005
+            kappa_low = 800
+            kappa_high = 10000
+            max_iter = 15
+            eps = 0.0005
             far_loss_func = FarLossCalc(
                 self.beta, T, self.class_model, self.far, is_seen, similarity_matrix
             )
@@ -507,7 +508,8 @@ class PosteriorProb:
                 - loggamma(d - 1 + self.kappa)
                 - loggamma(d / 2 + self.kappa)
             )
-            self.alpha = np.exp(log_alpha_power)
+            # self.alpha = np.exp(log_alpha_power)
+            self.log_alpha = log_alpha_power
             self.log_normalizer = (
                 loggamma(d - 1 + self.kappa)
                 + loggamma(d / 2 + self.kappa)
@@ -530,7 +532,7 @@ class PosteriorProb:
             )
 
         log_z_prob = (1 / T) * self.log_normalizer + torch.log(
-            logit_sum + (self.alpha * self.beta) ** (1 / T)
+            logit_sum + np.exp((1 / T) * (self.log_alpha + np.log(self.beta)))
         )
         return log_z_prob
 

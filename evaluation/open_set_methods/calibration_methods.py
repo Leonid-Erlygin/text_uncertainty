@@ -268,10 +268,10 @@ class NNcalibration:
             accuracy = np.mean(
                 (pred_eval.detach().cpu().numpy() > 0.5) == y.cpu().numpy()
             )
-            print(
-                f"Iteration {iter}, Loss: {loss.item()}, accuracy: {accuracy.item()}, lr: {optimizer.param_groups[0]['lr']}"
-            )
-            print(torch.sigmoid(weight).item())
+            # print(
+            #     f"Iteration {iter}, Loss: {loss.item()}, accuracy: {accuracy.item()}, lr: {optimizer.param_groups[0]['lr']}"
+            # )
+            # print(torch.sigmoid(weight).item())
         # draw probs
         self.draw_dencity_plot(X_norm.cpu(), error_calc, save_name)
 

@@ -68,7 +68,7 @@ class FarLossCalc:
         all_prob = np.concatenate([mean_probs, oog_prob], axis=-1)
         was_rejected = np.argmax(all_prob, axis=-1) == (all_prob.shape[-1] - 1)
         far = np.mean(was_rejected[~self.is_seen] == False)
-        # print(f"Found kappa {np.round(kappa,4)} for far {far}")
+        print(f"Found kappa {np.round(kappa,4)} for far {far}")
         return -np.abs(far - self.target_far) / self.target_far
 
 
@@ -148,10 +148,14 @@ class MonteCarloPredictiveProb:
         if g_unique_ids is not None and self.gallery_kappa == None:
             # find kappa
             is_seen = np.isin(probe_unique_ids, g_unique_ids)
+            # kappa_low = 300
+            # kappa_high = 1800
+            # kappa_low = 2000
+            # kappa_high = 2001
             kappa_low = 300
-            kappa_high = 1800
-            max_iter = 10
-            eps = 0.001
+            kappa_high = 10000
+            max_iter = 15
+            eps = 0.0005
             far_loss_func = FarLossCalc(
                 probe_feats,
                 probe_unc_scaled,
@@ -206,10 +210,10 @@ class MonteCarloPredictiveProb:
             gallery_unc_calib = self.gallery_pooled_templates_calib["g1"][
                 "template_pooled_data_unc"
             ]
-            kappa_low = 300
-            kappa_high = 1800
-            max_iter = 10
-            eps = 0.001
+            kappa_low = 800
+            kappa_high = 10000
+            max_iter = 20
+            eps = 0.0005
             far_loss_func_calib = FarLossCalc(
                 probe_feats_calib,
                 probe_unc_calib,
