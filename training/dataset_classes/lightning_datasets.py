@@ -455,6 +455,25 @@ class VoxBlinkEmbeddingsDataset(Dataset):
         return len(self.labels)
 
 
+class WhaleEmbeddingsDataset(Dataset):
+    def __init__(self, root_dir: str):
+        data = np.load(f"{root_dir}/embs.npz")
+        self.labels = np.load(f"{root_dir}/labels.npy")
+        self.embs = data["embs"]
+        self.embs = self.embs / np.linalg.norm(self.embs, axis=1, keepdims=True)
+
+        self.bottlenecks = data["unc"]  # prediction writer artifac
+
+    def __getitem__(self, index):
+        label = torch.tensor(self.labels[index], dtype=torch.long)
+        emb = torch.from_numpy(self.embs[index].astype("float32"))
+        bottleneck = torch.from_numpy(self.bottlenecks[index].astype("float32"))
+        return {"bottleneck_feature": bottleneck, "feature": emb}, label
+
+    def __len__(self):
+        return len(self.labels)
+
+
 class VoxBlinkDataset(Dataset):
     def __init__(self, root_dir: str, test: bool = False):
         super(VoxBlinkDataset, self).__init__()

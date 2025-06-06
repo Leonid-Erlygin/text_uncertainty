@@ -50,7 +50,8 @@ class ScaleFace(LightningModule):
         optimizer_params,
         scheduler_params,
         permute_batch: bool,
-        softmax_weights: torch.nn.Module = None,
+        softmax_weights: torch.nn.Module,
+        compute_embs: bool = False,
         validation_dataset=None,
         template_pooling_strategy=None,
         recognition_method=None,
@@ -63,18 +64,18 @@ class ScaleFace(LightningModule):
         self.backbone.eval()
         self.head = head
         self.scaleface_loss = scaleface_loss
-        if softmax_weights is None:
-            # assume that weights are stored in the backbone as in case of whale dataset
-            self.softmax_weights = self.backbone.backbone.head_id.weight.data
-            delattr(self.backbone.backbone, "head_id")
-            softmax_weights_norm = torch.norm(self.softmax_weights, dim=1, keepdim=True)
-            self.softmax_weights = self.softmax_weights / softmax_weights_norm
-            self.softmax_weights = torch.nn.Parameter(
-                self.softmax_weights, requires_grad=False
-            )
-        else:
-            self.softmax_weights = softmax_weights.softmax_weights
-
+        # if softmax_weights is None:
+        #     # assume that weights are stored in the backbone as in case of whale dataset
+        #     self.softmax_weights = self.backbone.backbone.head_id.weight.data
+        #     delattr(self.backbone.backbone, "head_id")
+        #     softmax_weights_norm = torch.norm(self.softmax_weights, dim=1, keepdim=True)
+        #     self.softmax_weights = self.softmax_weights / softmax_weights_norm
+        #     self.softmax_weights = torch.nn.Parameter(
+        #         self.softmax_weights, requires_grad=False
+        #     )
+        # else:
+        self.softmax_weights = softmax_weights.softmax_weights
+        self.compute_embs = compute_embs
         self.optimizer_params = optimizer_params
         self.scheduler_params = scheduler_params
         self.permute_batch = permute_batch
@@ -142,4 +143,9 @@ class ScaleFace(LightningModule):
             images_batch = batch
         if self.permute_batch:
             images_batch = images_batch.permute(0, 3, 1, 2)
-        return self(images_batch)
+        if self.compute_embs:
+            self.backbone.eval()
+            backbone_outputs = self.backbone(images_batch)
+            return backbone_outputs["feature"], backbone_outputs["bottleneck_feature"]
+        else:
+            return self(images_batch)
