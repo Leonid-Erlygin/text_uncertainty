@@ -6,7 +6,7 @@
 
 ### Repository Setup Steps
 
-1. **Downloading Datasets**:
+<!-- 1. **Downloading Datasets**:
    - Use the provided link to download the datasets: [Yandex Disk Link](https://disk.yandex.ru/d/TjOwePopUJmbpA)
    - Extract the `datasets` folder and place it in the root directory of the project. The structure should look like this:
      ```
@@ -16,7 +16,7 @@
      └───datasets
      │
      │   ...
-     ```
+     ``` -->
 
 2. **Building the Docker Image**:
    - Navigate to the `docker_scripts` directory and run the build script:
