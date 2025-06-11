@@ -25,6 +25,7 @@ dependencies:
   - pysoundfile
   - pip:
     - torch==2.1.1
+    - ipywidgets
     - python_speech_features
     - scikit-learn-intelex
     - numexpr

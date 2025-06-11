@@ -1,10 +1,12 @@
 outputs
 cache
 sandbox
+scripts/old_scripts
 multirun
 .hydra
 .vscode
 datasets
+notebooks/misc
 unsorted_data
 downloads_torrent
 wandb

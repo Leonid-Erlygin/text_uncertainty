@@ -1,8 +1,8 @@
 # Holistic Uncertainty Estimation For Open-Set Recognition
 
-### System Requirements
+<!-- ### System Requirements
 - **Docker Version**: 25.0.3
-- **CUDA Version**: 12.2
+- **CUDA Version**: 12.2 -->
 
 ### Repository Setup Steps
 
