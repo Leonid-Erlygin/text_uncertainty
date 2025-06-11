@@ -1,6 +1,0 @@
-CosineSim_MeanPool: "Среднее"
-CosineSim_DetScore_MeanPool: "Среднее, дет.конф"
-CosineSim_SCF-Pool: "SCF"
-CosineSim_DetScore_SCF-Pool: "SCF, дет.конф"
-CosineSim_PFEHarmonicMean-Pool: "PFE"
-CosineSim_DetScore_PFEHarmonicMean-Pool: "PFE, дет.конф"

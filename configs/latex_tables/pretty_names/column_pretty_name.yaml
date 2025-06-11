@@ -1,23 +1,24 @@
-pretty_name: "Метод"
-final_AUC_1_rank: ["AUC $(\\%)$", "Ранг 1"]
-final_top_1_recall_at_far_0.0001: ["TAR@FAR=$10^{-4}$ $(\\%)$", "Ранг 1"]
-final_top_1_recall_at_far_0.001: ["TAR@FAR=$10^{-3}$ $(\\%)$", "Ранг 1"]
-final_top_1_recall_at_far_1: ["TAR@FAR=$1$ $(\\%)$", "Ранг 1"]
-final_AUC_5_rank: ["AUC $(\\%)$", "Ранг 5"]
-final_top_5_recall_at_far_0.0001: ["TAR@FAR=$10^{-4}$ $(\\%)$", "Ранг 5"]
-final_top_5_recall_at_far_0.001: ["TAR@FAR=$10^{-3}$ $(\\%)$", "Ранг 5"]
-final_top_5_recall_at_far_1: ["TAR@FAR=$1$ $(\\%)$", "Ранг 5"]
-
-final_AUC_10_rank: ["AUC $(\\%)$", "Ранг 10"]
-final_top_10_recall_at_far_0.0001: ["TAR@FAR=$10^{-4}$ $(\\%)$", "Ранг 10"]
-final_top_10_recall_at_far_1: ["TAR@FAR=$1$ $(\\%)$", "Ранг 10"]
-final_auc: "AUC"
-final_recall_at_far_1e-06: "TAR@FAR=$10^{-6}$ $(\\%)$"
-final_recall_at_far_1e-05: "TAR@FAR=$10^{-5}$ $(\\%)$"
-final_recall_at_far_0.01: "TAR@FAR=$0.01$ $(\\%)$"
-final_recall_at_far_1: "TAR@FAR=$1$ $(\\%)$"
-
-final_cmc_at_rank_1: ["IR $(\\%)$", "Ранг 1"]
-final_cmc_at_rank_10 : ["IR $(\\%)$", "Ранг 10"]
-final_cmc_at_rank_50 : ["IR $(\\%)$", "Ранг 50"]
-final_cmc_at_rank_500 : ["IR $(\\%)$", "Ранг 500"]
+"models": "Method"
+"true_accept_false_ident" : ["True Accept & False Ident", "Count $(\\downarrow)$"]
+"false_reject_false_ident": ["False Reject & False Ident", "Count $(\\downarrow)$"]
+"false_reject_true_ident": ["False Reject & True Ident", "Count $(\\downarrow)$"]
+"false_ident": ["False Ident", "Count $(\\downarrow)$"]
+"false_accept": ["False Accept", "Count $(\\downarrow)$"]
+"false_reject": ["False Reject", "Count $(\\downarrow)$"]
+"error_sum": ["All errors", "Count $(\\downarrow)$"]
+"dir": ["DIR", "$(\\uparrow)$"]
+"fpir": ["FPIR", "$(\\downarrow)$"]
+"fnir": ["FNIR", "$(\\downarrow)$"]
+"far": ["FAR", " $(\\downarrow)$"]
+"f1": ["F1", " $(\\uparrow)$"]
+"f1_class": ["$F_1$"] #["$F_1$", " $(\\uparrow)$"]
+"FAR=0.005": ["$\\text{FAR}=0.005$"]
+"FAR=0.01": ["$\\text{FAR}=0.01$"]
+"FAR=0.05": ["$\\text{FAR}=0.05$"]
+"FAR=0.1": ["$\\text{FAR}=0.1$"]
+"FAR=0.2": ["$\\text{FAR}=0.2$"]
+"FAR=0.25": ["$\\text{FAR}=0.25$"]
+"FAR=0.3": ["$\\text{FAR}=0.3$"]
+"TAR@FAR=0.00001": ["TAR@FAR=0.00001"]
+"TAR@FAR=0.0001": ["TAR@FAR=0.0001"]
+"TAR@FAR=0.01": ["TAR@FAR=0.01"]

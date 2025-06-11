@@ -34,8 +34,7 @@ def create_table_head(result_latex_code, caption, table_lable, cfg):
             far = column.split("=")[-1]
             fars.append(f"${far}$")
         column_count += len(used_columns[key]) - 1
-    # column_count = (len(used_columns) - 1) * len(cfg.datasets)
-    column_pretty_name = cfg.pretty_name.column
+
     if cfg.fix_table:
         result_latex_code += "\\begin{table}[H]\n"
     else:
@@ -65,21 +64,6 @@ def create_table_head(result_latex_code, caption, table_lable, cfg):
             result_latex_code += "& \\multicolumn{3}{c}{" + dataset_pretty_name + "} "
         result_latex_code += "\\\\\n"
         result_latex_code += "\\midrule\n"
-    next_column_index = 1
-
-    # for raw_column_name in used_columns:
-    #     pretty_name = column_pretty_name[raw_column_name]
-    #     if isinstance(pretty_name, str):
-    #         pretty_name = [pretty_name]
-    #     result_latex_code += (
-    #         "\\begin{tabular}{c}\n" + "\\\\\n".join(pretty_name) + "\n\\end{tabular}"
-    #     )
-    #     if next_column_index < len(used_columns):
-    #         result_latex_code += "&\n"
-    #     else:
-    #         result_latex_code += "\\\\\n"
-    #         result_latex_code += "\midrule\n"
-    #     next_column_index += 1
     return result_latex_code
 
 
@@ -91,7 +75,6 @@ def create_table_body(result_latex_code, cfg):
             cfg.task
         ][dataset]
         table_path = cfg.metric_table_path.format(dataset=dataset)
-        print(table_path)
         all_metric_values = pd.read_csv(table_path)
         all_metric_values = all_metric_values.drop(
             all_metric_values[
@@ -110,7 +93,6 @@ def create_table_body(result_latex_code, cfg):
     )
     best_values = pd.DataFrame(dataset_to_best_values[cfg.datasets[0]])
     for i in range(len(cfg.datasets) - 1):
-        # table = table.join(dataset_to_metrics[datasets[i+1]], on='models', how='left', lsuffix='_left', rsuffix='_right')
         next_table = dataset_to_metrics[cfg.datasets[i + 1]]
         next_table = next_table.set_index("models").drop("Unnamed: 0", axis=1)
         table = pd.concat([table, next_table], join="inner", axis=1)
@@ -124,12 +106,12 @@ def create_table_body(result_latex_code, cfg):
             elif column_name != "models":
                 # metric value
                 metric_value = row.iloc[column_index]
-                if metric_value == best_values.iloc[0][column_index - 1]:
+                if metric_value == best_values.iloc[0, column_index - 1]:
                     # best value
                     result_latex_code += (
                         "\\textbf{" + str(np.round(metric_value, cfg.round_num)) + "} "
                     )
-                elif metric_value == best_values.iloc[1][column_index - 1]:
+                elif metric_value == best_values.iloc[1, column_index - 1]:
                     # second best value
                     result_latex_code += (
                         "\\underline{"
@@ -148,13 +130,11 @@ def create_table_body(result_latex_code, cfg):
     return result_latex_code
 
 
-def create_table_tail(result_latex_code, caption, table_lable, cfg):
+def create_table_tail(result_latex_code, cfg):
     result_latex_code += "\\bottomrule\n"
     result_latex_code += "\\end{tabular}\n"
     if cfg.use_adjustbox:
         result_latex_code += "\\end{adjustbox}\n"
-    # result_latex_code += "\\caption{" + caption + "}\n"
-    # result_latex_code += "\\label{" + table_lable + "}\n"
     result_latex_code += "\\end{table}\n"
 
     return result_latex_code
@@ -167,20 +147,11 @@ def create_table_tail(result_latex_code, caption, table_lable, cfg):
 )
 def run(cfg):
     result_latex_code = """"""
-    if "{dataset_name}" in cfg.caption:
-        caption = cfg.caption.format(
-            dataset_name=cfg.datasets, task=cfg.pretty_name.task[cfg.task]
-        )
-    else:
-        caption = cfg.caption
 
-    # cfg.used_columns = OmegaConf.to_container(cfg.used_columns_dict)[cfg.task][
-    #     cfg.datasets
-    # ]
     # table head
     result_latex_code = create_table_head(
         result_latex_code,
-        caption,
+        cfg.caption,
         cfg.table_lable,
         cfg,
     )
@@ -190,7 +161,7 @@ def run(cfg):
 
     # table tail
     result_latex_code = create_table_tail(
-        result_latex_code, caption, cfg.table_lable, cfg
+        result_latex_code, cfg
     )
 
     # save result

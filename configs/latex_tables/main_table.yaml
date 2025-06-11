@@ -2,7 +2,7 @@
 hydra:
   run:
     dir: ${exp_dir}
-exp_dir: outputs/latex_tables/${now:%Y-%m-%d_%H-%M-%S}
+exp_dir: outputs/latex_tables
 
 defaults:
   - _self_
@@ -12,38 +12,48 @@ defaults:
   - meta_data@metric_order: metric_order
 
 
-datasets: ["IJBC"]
+datasets: ["IJBC"] #["IJBC", "IJBB", "whale"]
+
 task: filter
 
-metric_table_path: outputs/experiments/mc_kl_compare_norm/open_set_identification/{dataset}/filter_tabels/f1_class_prr_filtering.csv
+# CHANGE
+#metric_table_path: outputs/experiments/whale/open_set_identification/{dataset}/filter_tabels/f1_class_prr_filtering.csv
+metric_table_path: /app/outputs/experiments/scale_face/open_set_identification/IJBC/filter_tabels/f1_class_prr_filtering.csv
 
 caption: >
-  Prediction Rejection Ratio (PRR) of $F_1$ filtering curve on IJB-C dataset.
+  Prediction Rejection Ratios (PRR) for $F_1$ filtering curve for the three considered datasets IJB-C, IJB-B, Whale.
   
 fix_table: False
-table_lable: "tab:${task}_ablation"
+table_lable: "tab:${task}"
 round_num: 2
-table_size: normalsize
-tabcolsep: 6
+table_size: footnotesize
+tabcolsep: 3
 use_adjustbox: False
 
 used_columns: []
 sort_models_with: "used_models"
+
 used_columns_dict:
   filter:
     whale:
       [
         "models",
+        #"FAR=0.01",
         "FAR=0.05",
         "FAR=0.1",
         "FAR=0.2",
+        #"FAR=0.25",
+        # "FAR=0.3",
       ]
     IJBB:
       [
         "models",
+        #"FAR=0.01",
         "FAR=0.05",
         "FAR=0.1",
         "FAR=0.2",
+        #"FAR=0.25",
+        # "FAR=0.3",
       ]
     IJBC:
       [
@@ -52,7 +62,5 @@ used_columns_dict:
         "FAR=0.1",
         "FAR=0.2"
       ]
-  
-
 
 

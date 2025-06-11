@@ -1,5 +1,0 @@
-CosineSim: "Коc. MaxProb"
-SCF_dist: "SCF MaxProb"
-SCF_NAC-k=120: "SCF NAC, $k=120$"
-PFE_dist: "PFE MaxProb"
-PFE_NAC-k=120: "PFE NAC, $k=120$"

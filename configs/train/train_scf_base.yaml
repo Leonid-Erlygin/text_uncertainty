@@ -1,41 +1,53 @@
 seed_everything: 777
-mode: predict
-weights_path: /app/model_weights/pfe_whale.ckpt
+mode: train
 trainer:
   _target_: pytorch_lightning.Trainer
+  logger:
+    _target_: pytorch_lightning.loggers.WandbLogger
+    project: "SCF-train"
+    name: "Test Base"
   callbacks:
   - _target_: pytorch_lightning.callbacks.ModelCheckpoint 
     every_n_epochs: 1
-    dirpath: outputs/pfe_train/pfe_base
+    dirpath: outputs/scf_multiple/scf_base
     save_last: True
   - _target_: pytorch_lightning.callbacks.LearningRateMonitor
     logging_interval: "step"
   - _target_: training.models.scf.Prediction_writer
-    output_dir: /app/cache/features/ #/app/datasets/arcface_ijb/IJBB/embeddings #/app/datasets/arcface_ijb/IJBC/embeddings #/app/datasets/ms1m_ident/embeddings #/app/datasets/arcface_ijb/IJBC/embeddings
-    file_name: pfe_embs_whale #pfe_2epoch_embs_IJBB #pfe_2epoch_embs_IJBC
+    output_dir: /app/cache/features
+    file_name: scf_vgg_from_zero
     write_interval: epoch
   max_epochs: 2
   accelerator: gpu
   devices: 1
   num_sanity_val_steps: 0
   log_every_n_steps: 3
-  default_root_dir: outputs/pfe_train
-  #val_check_interval: 0.1
+  default_root_dir: outputs/scf_train_demo
+  val_check_interval: 0.1
   enable_checkpointing: true
 model:
-    _target_: training.models.pfe.ProbabilisticFaceEmbedding
+    _target_: training.models.scf.SphereConfidenceFace
     backbone:
-        _target_: training.models.lightning_wrappers.EfficientNet
-        checkpoint_path: /app/model_weights/whale_arcface/last-v4.ckpt
+        _target_: training.models.lightning_wrappers.ResNet
+        resnet_name: iresnet50_normalized
+        weights: /app/model_weights/backbone/ms1mv3_arcface_r50/backbone.pth
         learnable: False
     head:
-        _target_: training.models.heads.PFEHeadAdjustableLightning      
-        in_feat: 776
-        out_feat: 512
-        learnable: True
-    pfe_loss:
-        _target_: training.models.losses.PFELoss
-        mean: True
+        _target_: training.models.heads.SCFHead
+        convf_dim: 25088
+        latent_vector_size: 4096
+    # head:
+    #     _target_: training.models.heads.SCFHeadLayer1
+    #     num_planes: [32, 32, 32, 32]
+    #     num_layers: [1, 2, 3, 4]
+    scf_loss:
+        _target_: training.models.losses.KLDiracVMF
+        z_dim: 512
+        radius: 64
+    softmax_weights:
+        _target_: training.models.scf.SoftmaxWeights
+        softmax_weights_path: "/app/model_weights/backbone/ms1mv3_arcface_r50/softmax_weight.pt"
+        radius: 64
     optimizer_params:
         optimizer_path: torch.optim
         optimizer_name: AdamW
@@ -46,7 +58,7 @@ model:
         scheduler: OneCycleLR
         params:
             max_lr: 3e-4
-            steps_per_epoch: 3191 # 22742 #13863
+            steps_per_epoch: 13863
             epochs: 2
             div_factor: 1e1
             final_div_factor: 1e2
@@ -80,10 +92,6 @@ data:
     train_dataset:
         _target_: training.dataset_classes.lightning_datasets.MXFaceDataset
         root_dir: /app/datasets/ms1m/
-    train_batch_sampler:
-        _target_: training.dataset_classes.samplers.PfeSampler
-        batch_size: 256
-        labels_path: /app/datasets/ms1m/labels.npy
     validation_dataset:
         _target_: training.dataset_classes.arcface_ijb.IJB_aligned_images
         dataset_path: /app/datasets/arcface_ijb/IJBC
@@ -91,21 +99,9 @@ data:
         norm_image: True
 
     predict_dataset:
-        # _target_: training.dataset_classes.lightning_datasets.MXFaceDataset
-        # root_dir: /app/datasets/ms1m/
-        # test: True
-        # num_classes: 3531
-        # _target_: training.dataset_classes.arcface_ijb.IJB_aligned_images
-        # dataset_path: /app/datasets/arcface_ijb/IJBC
-        # dataset_name: IJBC
-        # norm_image: True
-        _target_: training.dataset_classes.lightning_datasets.WhaleDataset    
-        config_path: /app/training/models/whale_arcface/config/efficientnet_b6_new.yaml
-        image_dir: /app/datasets/whale_images
-        test: True
-        # _target_: training.dataset_classes.arcface_ijb.IJB_aligned_images
-        # dataset_path: /app/datasets/arcface_ijb/IJBB
-        # dataset_name: IJBB
-        # norm_image: True
-    batch_size: 16
-    num_workers: 8
+        _target_: training.dataset_classes.arcface_ijb.IJB_aligned_images
+        dataset_path: /app/datasets/arcface_ijb/IJBC
+        dataset_name: IJBC
+        norm_image: True
+    batch_size: 420
+    num_workers: 38
