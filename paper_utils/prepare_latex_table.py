@@ -160,9 +160,7 @@ def run(cfg):
     result_latex_code = create_table_body(result_latex_code, cfg)
 
     # table tail
-    result_latex_code = create_table_tail(
-        result_latex_code, cfg
-    )
+    result_latex_code = create_table_tail(result_latex_code, cfg)
 
     # save result
     with open(Path(cfg.exp_dir) / "table.tex", "w") as fd:

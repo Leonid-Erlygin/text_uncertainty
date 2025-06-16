@@ -227,45 +227,6 @@ class MetricLearningModel(LightningModule):
         dists = []
         colors = list(mcolors.TABLEAU_COLORS)[: self.hparams.num_labels]
 
-        # if self.hparams.num_features == 2:
-        #     # plot feature space in 2D
-        #     fig = plt.figure(figsize=(6, 6))
-        #     for i, (center, color) in enumerate(zip(weights, colors)):
-        #         points = features[labels == i]
-
-        #         # compute average distance in the current class
-        #         dists.append(((points - center) ** 2).sum(axis=1).mean().item())
-
-        #         # visualize the results
-        #         x, y = [0, center[0]], [0, center[1]]
-        #         plt.plot(x, y, marker="", c=color)
-        #         plt.scatter(points[:, 0], points[:, 1], color=color, s=3)
-
-        #     plt.gca().set_aspect("equal")
-        #     plt.axis("off")
-        #     plt.title("Feature space visualization", fontsize=14)
-        #     # image_array = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-        #     # image_array = image_array.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-        #     # images = wandb.Image(image_array)
-        #     # # images = [PIL.Image.fromarray(image) for image in image_array]
-
-        #     # self.log("Ray plot", images)
-        #     # self.log("val_avg_distance", np.mean(dists), prog_bar=True)
-        #     plt.show()
-        #     plt.clf()
-
-        # log matplotlib.figure() and the metrics to Logger
-        # figure logging works only with several loggers (e.g. comet)
-        # self.logger.experiment.log_figure(f"val_picture_num_{self.current_epoch}", plt)
-        # if self.hparams.num_features == 2:
-        #     image_array = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-        #     image_array = image_array.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-        #     images = wandb.Image(image_array)
-        #     self.log({"Rays": images})
-
-        # plt.show()
-        # plt.clf()
-
     def configure_optimizers(self) -> Dict[str, torch.optim.Optimizer]:
         """Create optimizer for model training."""
         params = list(self.parameters())

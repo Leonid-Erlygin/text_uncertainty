@@ -1,21 +1,33 @@
 from pytorch_lightning.cli import LightningCLI
+from pytorch_lightning import Trainer, seed_everything
 import sys
+import torch
+import importlib
 
-sys.path.append("/app")
-sys.path.append("/app/sandbox/AdaFace")
-# code based on original repo: https://github.com/MathsShen/SCF
-# main config for training: configs/hydra/train_sphere_face.yaml
-# simple demo classes for your convenience
-
-#  resume_from_checkpoint: /app/outputs/scf_train/weights/epoch=0-step=45000-v1.ckpt
+from omegaconf import DictConfig, OmegaConf
+import hydra
+from hydra.utils import instantiate
 
 
-def cli_main():
-    cli = LightningCLI(
-        parser_kwargs={"parser_mode": "omegaconf"},
-        save_config_kwargs={"overwrite": True},
-    )
+@hydra.main(version_base=None, config_path="/app/configs/train")
+def train_model(cfg):
+    print(cfg)
+    seed_everything(cfg.seed_everything, workers=True)
+
+    trainer = instantiate(cfg.trainer)
+    model = instantiate(cfg.model)
+    if hasattr(cfg, "weights_path"):
+        checkpoint = torch.load(cfg.weights_path, weights_only=False)
+        model.load_state_dict(checkpoint["state_dict"])
+    dataclass = instantiate(cfg.data)
+
+    if cfg.mode == "train":
+        trainer.fit(model=model, datamodule=dataclass)
+    elif cfg.mode == "predict":
+        trainer.predict(model=model, datamodule=dataclass)
+    else:
+        raise ValueError
 
 
 if __name__ == "__main__":
-    cli_main()
+    train_model()

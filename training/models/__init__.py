@@ -1,6 +1,5 @@
 from .base import FaceModule
 from .losses import MLSLoss, AngleLoss, ArcFace, CosFace, MLS, ProbLoss
-from .spherenet import SphereNet20
 from .heads import (
     SCFHead,
     PFEHead,
@@ -8,7 +7,6 @@ from .heads import (
     ProbHead,
     PFEHeadAdjustableSpectralSimple,
 )
-from .pair_classifiers import MLP, SmartCosine, Bilinear
 from .iresnet import (
     iresnet18,
     iresnet34,
@@ -18,14 +16,9 @@ from .iresnet import (
     iresnet50_spectral_normalized,
 )
 from .scf import SphereConfidenceFace, Prediction_writer
-from .partial_fc import PartialFC
-from .style_gan import StyleGanDiscriminator
-from .scale_predictors import MLPHead
 from torch.nn import BCELoss, CrossEntropyLoss
 
 model_dict = {
-    "spherenet20": SphereNet20,
-    "partial_fc": PartialFC,
     "iresnet50": iresnet50,
     "iresnet100": iresnet100,
     "iresnet50_normalized": iresnet50_normalized,
