@@ -64,16 +64,6 @@ class ScaleFace(LightningModule):
         self.backbone.eval()
         self.head = head
         self.scaleface_loss = scaleface_loss
-        # if softmax_weights is None:
-        #     # assume that weights are stored in the backbone as in case of whale dataset
-        #     self.softmax_weights = self.backbone.backbone.head_id.weight.data
-        #     delattr(self.backbone.backbone, "head_id")
-        #     softmax_weights_norm = torch.norm(self.softmax_weights, dim=1, keepdim=True)
-        #     self.softmax_weights = self.softmax_weights / softmax_weights_norm
-        #     self.softmax_weights = torch.nn.Parameter(
-        #         self.softmax_weights, requires_grad=False
-        #     )
-        # else:
         self.softmax_weights = softmax_weights.softmax_weights
         self.compute_embs = compute_embs
         self.optimizer_params = optimizer_params

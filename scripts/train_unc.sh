@@ -12,4 +12,5 @@ docker run \
  --gpus '"device=5"' \
  -w="/app" \
  ${USER}_$(basename $(dirname "$PWD")) \
- python3 training/trainers/train.py -cn=scf # -cn=scaleface # -cn=pfe 
+ python3 training/trainers/train.py -cn=scf_whale # -cn=scaleface_whale #-cn=pfe_whale #-cn=scaleface_vb2 
+ # -cn=pfe_vb2 # -cn=scf_vb2 #-cn=scf_ms1m # -cn=scaleface_ms1m # -cn=pfe_ms1m 
