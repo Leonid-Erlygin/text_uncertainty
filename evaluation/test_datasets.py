@@ -40,13 +40,3 @@ class HQVerifivationDataset:
         self.p2 = index[1::2]
         self.label = issame[0::2]
         self.face_scores = None
-        # (
-        #     self.templates,
-        #     self.medias,
-        #     self.p1,
-        #     self.p2,
-        #     self.label,
-        #     _,
-        #     _,
-        #     self.face_scores,
-        # ) = extract_meta_data(dataset_path, dataset_name)

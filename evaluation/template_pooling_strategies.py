@@ -33,13 +33,9 @@ class PoolingDefault(AbstractTemplatePooling):
         templates: np.ndarray,
         medias: np.ndarray,
     ):
-        # templates = np.sort(templates) # WAS THIS A PROBLEM?
         ## here we assume that after default pooling uncertainty are not used
         unique_templates, indices = np.unique(templates, return_index=True)
         templates_kappa = np.zeros((len(unique_templates), raw_unc.shape[1]))
-        # unique_templates, indices = np.unique(choose_templates, return_index=True)
-        # unique_subjectids = choose_ids[indices]
-
         template_feats = np.zeros((len(unique_templates), img_feats.shape[1]))
         for count_template, uqt in tqdm(
             enumerate(unique_templates),
@@ -90,11 +86,7 @@ class PoolingConcentration(AbstractTemplatePooling):
         templates: np.ndarray,
         medias: np.ndarray,
     ):
-        # templates = np.sort(templates)
-        unique_templates, indices = np.unique(
-            templates, return_index=True
-        )  # unique_templates, indices = np.unique(choose_templates, return_index=True)
-        # unique_subjectids = choose_ids[indices]
+        unique_templates, indices = np.unique(templates, return_index=True)
 
         template_feats = np.zeros((len(unique_templates), img_feats.shape[1]))
         templates_kappa = np.zeros((len(unique_templates), kappa.shape[1]))
@@ -154,7 +146,6 @@ class PoolingProb(AbstractTemplatePooling):
         medias: np.ndarray,
     ):
         # here we aggregate probe templates using conf and also return mean data conf to get pure aggregated scf conf
-        # templates = np.sort(templates)
         assert templates.shape[0] == img_feats.shape[0]
         assert templates.shape[0] == conf.shape[0]
         assert templates.shape[0] == data_conf.shape[0]
@@ -366,11 +357,7 @@ class PoolingPFEHarmonicMean(AbstractTemplatePooling):
         medias: np.ndarray,
     ):
         unique_templates, indices = np.unique(templates, return_index=True)
-        # unique_templates, indices = np.unique(choose_templates, return_index=True)
-        # unique_subjectids = choose_ids[indices]
 
-        # compute harmonic mean of unc
-        # raise NotImplemented
         # need to use aggregation as in Eqn. (6-7) and min variance pool, when media type is the same
         # across pooled images
         sigma_sq = np.exp(raw_unc)
@@ -450,8 +437,6 @@ class PoolingPFE(AbstractTemplatePooling):
         medias: np.ndarray,
     ):
         unique_templates, indices = np.unique(templates, return_index=True)
-        # unique_templates, indices = np.unique(choose_templates, return_index=True)
-        # unique_subjectids = choose_ids[indices]
 
         # compute harmonic mean of unc
         # raise NotImplemented

@@ -29,32 +29,23 @@ def plot_rejection_scores(
         fractions, metric_value = score[0], score[1]
         name = name if name is not None else str(id)
 
-        # rejection_metric_value = rejection_metric(rank, cmc)
         auc_value = fractions[-1] * np.mean(metric_value)
         if random_area is not None:
-            # rejection_metric_value = np.abs(
-            #     (auc_value - random_area) / (oracle_area - random_area)
-            # )
             rejection_metric_value = (auc_value - random_area) / (
                 oracle_area - random_area
             )
 
-            # relative_area_value = (fractions[-1] * np.mean(1 - metric_value)) / (1 - metric_value[0]) * fractions[-1]
             rejection_metric_values.append(rejection_metric_value)
-            # label = name + f", PRR score={np.round(rejection_metric_value, 2)}"
             label = name + f", {np.abs(np.round(rejection_metric_value, 2))}"
         else:
             label = name
         plt.plot(fractions, metric_value, lw=1, label=label)
 
     plt.xlabel("Filter Out Rate")
-    # plt.xlim([0.0001, 1])
-    # plt.xscale("log")
     plt.ylabel(y_label)
-    # plt.ylim([0, 1])
 
     plt.grid(linestyle="--", linewidth=1)
-    plt.legend()  # (fontsize="x-small")
+    plt.legend()
     plt.tight_layout()
     return fig, rejection_metric_values
 
@@ -100,7 +91,6 @@ def plot_roc_and_calculate_tpr(scores, names=None, label=None):
     tpr_result_df["AUC"] = pd.Series(roc_auc_dict)
     tpr_result_df.columns.name = "Methods"
     print(tpr_result_df.to_markdown())
-    # print(tpr_result_df)
 
     try:
         import matplotlib.pyplot as plt
@@ -206,7 +196,6 @@ def plot_dir_far_scores(scores, names, y_label: str, marker=""):
 
     plt.xlabel("False Alarm Rate")
     plt.xlim([0.0001, 1])
-    # plt.xlim([0.95, 1])
     plt.xscale("log")
     plt.ylabel(y_label)
     # plt.ylim([0, 1])
@@ -214,9 +203,6 @@ def plot_dir_far_scores(scores, names, y_label: str, marker=""):
     plt.grid(linestyle="--", linewidth=1)
     plt.legend(fontsize="x-small")
     plt.tight_layout()
-    # except:
-    #     print("matplotlib plot failed")
-    #     fig = None
 
     return fig
 
@@ -251,8 +237,5 @@ def plot_tar_far_scores(scores, names=None):
     plt.grid(linestyle="--", linewidth=1)
     plt.legend(fontsize="x-small")
     plt.tight_layout()
-    # except:
-    #     print("matplotlib plot failed")
-    #     fig = None
 
     return fig

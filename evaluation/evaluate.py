@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
-# from evaluation.uncertainty_metrics import DisposeBasedOnUnc
 
 
-# from uncertainty_metrics import DisposeBasedOnUnc
 from pathlib import Path
 import hydra
 import omegaconf
@@ -12,12 +10,10 @@ import numpy as np
 from itertools import product
 from evaluation.face_recognition_test import Face_Fecognition_test
 
-# from face_recognition_test import Face_Fecognition_test
 import pandas as pd
 import matplotlib.pyplot as plt
 from evaluation.visualize import (
     plot_dir_far_scores,
-    plot_cmc_scores,
     plot_tar_far_scores,
     plot_rejection_scores,
 )
@@ -91,10 +87,8 @@ def multiply_methods(cfg, methods, method_task_type):
                 new_method.recognition_method.kappa = tau
                 new_method.recognition_method.T = T
                 new_method.recognition_method.T_data_unc = T_data_unc
-                new_method.pretty_name = (
-                    method.pretty_name
-                    # + f"_tau-{np.round(tau, 2)}_T-{np.round(T, 2)}_T_data-{np.round(T_data_unc, 2)}"
-                )
+                new_method.pretty_name = method.pretty_name
+
                 new_methods.append(new_method)
         else:
             new_methods.append(method)
@@ -155,14 +149,8 @@ def main(cfg):
         # set far value
         recognition_method.far = far
         recognition_method.beta = beta
-        if (
-            False
-            and "Random" not in method.pretty_name
-            and "Oracle" not in method.pretty_name
-        ):
-            pretty_name = method.pretty_name + f"_beta={beta}"
-        else:
-            pretty_name = method.pretty_name
+
+        pretty_name = method.pretty_name
         # create unique method name
         if cfg.create_pool_plot is False:
             method_name = (
@@ -329,22 +317,6 @@ def main(cfg):
                 )
                 plt.close(fig)
 
-                # # save filter table
-                # rejection_df = pd.DataFrame(data_rows, columns=column_names)
-                # rejection_df.to_csv(
-                #     filter_tables_dir / f'{metric_name.split(":")[-1]}_filtering.csv'
-                # )
-                # # save auc table
-
-                # auc_at_far_data_frames.append(
-                #     pd.DataFrame(
-                #         {
-                #             "models": model_names,
-                #             f"AUCS": rejection_metric_values,
-                #         }
-                #     )
-                # )
-
             # create recognition tables
             data_rows = []
             column_names = []
@@ -368,10 +340,7 @@ def main(cfg):
             continue
 
         # create rejection plots
-        # fraction_data_rows = {frac: [] for frac in fractions}
-        # fraction_column_names = ["models"] + [
-        #     metric_name.split(":")[-1] for metric_name in metric_names
-        # ]
+
         column_names = ["models", *[str(np.round(frac, 4)) for frac in fractions]]
 
         for metric_name in metric_names:
@@ -465,29 +434,7 @@ def main(cfg):
             )
             continue
             # save trans auc table
-            new_auc_df_lines = []
-            new_auc_df_columns = ["models"] + list(auc_df.columns[3:-1])
-            aucs = []
-            model_names = []
-            for far, df in auc_df.groupby("far"):
-                new_auc_df_columns.append(f"FAR={far}")
-                aucs.append(list(df["auc"]))
-                model_names = list(df["models"])
-            aucs = np.array(aucs).T
-            aucs = list(aucs)
-            for model_name, auc in zip(model_names, aucs):
-                new_auc_df_lines.append([model_name, *auc.tolist()])
-            new_auc_df = pd.DataFrame(new_auc_df_lines, columns=new_auc_df_columns)
-            new_auc_df.to_csv(
-                out_table_dir / f'{metric_name.split(":")[-1]}_aucs_pretty.csv'
-            )
 
-        # for frac, data_rows in fraction_data_rows.items():
-        #     frac_rejection_df = pd.DataFrame(data_rows, columns=fraction_column_names)
-        #     frac_rejection_df.to_csv(
-        #         out_table_fractions_dir
-        #         / f'{str(np.round(frac, 4)).ljust(6, "0")}_frac_rejection.csv'
-        #     )
         if cfg.create_pool_plot:
             # create pool plot
             tables_path = out_dir / "tabels"

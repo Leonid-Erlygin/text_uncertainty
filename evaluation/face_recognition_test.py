@@ -130,219 +130,202 @@ class Face_Fecognition_test:
         similarity_matrix_path.mkdir(parents=True, exist_ok=True)
         template_subsets_path.mkdir(parents=True, exist_ok=True)
         template_pool_path.mkdir(parents=True, exist_ok=True)
-        pooled_templates_path = 1
-        if self.recompute_template_pooling is False and False:
-            pooled_data = np.load(pooled_templates_path)
-            self.template_pooled_emb = pooled_data["template_pooled_emb"]
-            self.template_pooled_unc = pooled_data["template_pooled_unc"]
-            self.template_ids = pooled_data["template_ids"]
+
+        print("Pooling embeddings...")
+        # first pool gallery templates
+        # then use them to poll probe templates
+        # probe templates should be pooled using appropriate gallery
+
+        # 1. Pool each gallery separetly using gallery pooling strategy
+        # 2. Probe templates shoold be pooled 2 ways: a) against gallery_1, b) against gallery_2
+        # during recognition appropriate pooling of probe templates should be used, when testing
+        # against two galleries
+        used_galleries = ["g1"]
+        if (
+            self.use_two_galleries
+            and self.test_dataset is not None
+            and self.test_dataset.g2_templates.shape != ()
+        ):
+            used_galleries += ["g2"]
+
+        self.gallery_pooled_templates = {
+            gallery_name: {} for gallery_name in used_galleries
+        }
+        self.probe_pooled_templates = {
+            gallery_name: {} for gallery_name in used_galleries
+        }
+
+        if (template_subsets_path / "probe.npz").is_file():
+            data = np.load(template_subsets_path / "probe.npz")
+            probe_features = data["probe_features"]
+            probe_unc = data["probe_unc"]
+            probe_templates_sorted = data["probe_templates_sorted"]
+            probe_medias = data["probe_medias"]
+            probe_subject_ids_sorted = data["probe_subject_ids_sorted"]
         else:
-            print("Pooling embeddings...")
-            # first pool gallery templates
-            # then use them to poll probe templates
-            # probe templates should be pooled using appropriate gallery
+            (
+                probe_features,
+                probe_unc,
+                probe_medias,
+                probe_templates_sorted,
+                probe_subject_ids_sorted,
+            ) = get_template_subsets(
+                self.image_input_feats,
+                self.unc,
+                self.test_dataset.templates,
+                self.test_dataset.medias,
+                self.test_dataset.probe_ids,
+                self.test_dataset.probe_templates,
+            )
+            np.savez(
+                template_subsets_path / "probe.npz",
+                probe_features=probe_features,
+                probe_unc=probe_unc,
+                probe_medias=probe_medias,
+                probe_templates_sorted=probe_templates_sorted,
+                probe_subject_ids_sorted=probe_subject_ids_sorted,
+            )
 
-            # 1. Pool each gallery separetly using gallery pooling strategy
-            # 2. Probe templates shoold be pooled 2 ways: a) against gallery_1, b) against gallery_2
-            # during recognition appropriate pooling of probe templates should be used, when testing
-            # against two galleries
-            used_galleries = ["g1"]
-            if (
-                self.use_two_galleries
-                and self.test_dataset is not None
-                and self.test_dataset.g2_templates.shape != ()
-            ):
-                used_galleries += ["g2"]
+        probe_unc = np.exp(probe_unc)
 
-            self.gallery_pooled_templates = {
-                gallery_name: {} for gallery_name in used_galleries
-            }
-            self.probe_pooled_templates = {
-                gallery_name: {} for gallery_name in used_galleries
-            }
-
-            if (template_subsets_path / "probe.npz").is_file():
-                data = np.load(template_subsets_path / "probe.npz")
-                probe_features = data["probe_features"]
-                probe_unc = data["probe_unc"]
-                probe_templates_sorted = data["probe_templates_sorted"]
-                probe_medias = data["probe_medias"]
-                probe_subject_ids_sorted = data["probe_subject_ids_sorted"]
+        for gallery_name in used_galleries:
+            gallery_templates = getattr(self.test_dataset, f"{gallery_name}_templates")
+            gallery_subject_ids = getattr(self.test_dataset, f"{gallery_name}_ids")
+            if (template_subsets_path / f"gallery_{gallery_name}.npz").is_file():
+                data = np.load(template_subsets_path / f"gallery_{gallery_name}.npz")
+                gallery_features = data["gallery_features"]
+                gallery_unc = data["gallery_unc"]
+                gallery_medias = data["gallery_medias"]
+                gallery_templates_sorted = data["gallery_templates_sorted"]
+                gallery_subject_ids_sorted = data["gallery_subject_ids_sorted"]
             else:
                 (
-                    probe_features,
-                    probe_unc,
-                    probe_medias,
-                    probe_templates_sorted,
-                    probe_subject_ids_sorted,
+                    gallery_features,
+                    gallery_unc,
+                    gallery_medias,
+                    gallery_templates_sorted,
+                    gallery_subject_ids_sorted,
                 ) = get_template_subsets(
                     self.image_input_feats,
                     self.unc,
                     self.test_dataset.templates,
                     self.test_dataset.medias,
-                    self.test_dataset.probe_ids,
-                    self.test_dataset.probe_templates,
+                    gallery_subject_ids,
+                    gallery_templates,
                 )
                 np.savez(
-                    template_subsets_path / "probe.npz",
-                    probe_features=probe_features,
-                    probe_unc=probe_unc,
-                    probe_medias=probe_medias,
-                    probe_templates_sorted=probe_templates_sorted,
-                    probe_subject_ids_sorted=probe_subject_ids_sorted,
+                    template_subsets_path / f"gallery_{gallery_name}.npz",
+                    gallery_features=gallery_features,
+                    gallery_unc=gallery_unc,
+                    gallery_medias=gallery_medias,
+                    gallery_templates_sorted=gallery_templates_sorted,
+                    gallery_subject_ids_sorted=gallery_subject_ids_sorted,
                 )
-            # if probe_unc.shape[1] == 1:
-            #     # exponentiate kappa
-            #     probe_unc = np.exp(probe_unc)
-            # assert probe_unc.shape[1] == 1  # working with scf unc
-            probe_unc = np.exp(probe_unc)
-            # probe_kappa = np.exp(probe_unc)
+            # 1. pool selected gallery templates
+            # assert gallery_unc.shape[1] == 1  # working with scf unc
+            gallery_unc = np.exp(gallery_unc)
+            # kappa = np.exp(gallery_unc)
+            if (
+                template_pool_path / f"gallery_{gallery_name}.npz"
+            ).is_file() and self.recompute_template_pooling is False:
+                print("Loading pool")
+                data = np.load(template_pool_path / f"gallery_{gallery_name}.npz")
+                pooled_data = (
+                    data["template_pooled_features"],
+                    data["template_pooled_data_unc"],
+                )
+            else:
+                pooled_data = self.gallery_template_pooling_strategy(
+                    gallery_features,
+                    gallery_unc,
+                    gallery_templates_sorted,
+                    gallery_medias,
+                )
+                np.savez(
+                    template_pool_path / f"gallery_{gallery_name}.npz",
+                    template_pooled_features=pooled_data[0],
+                    template_pooled_data_unc=pooled_data[1],
+                )
+            self.gallery_pooled_templates[gallery_name] = {
+                "template_pooled_features": pooled_data[0],
+                "template_pooled_data_unc": pooled_data[1],
+                "template_subject_ids_sorted": gallery_subject_ids_sorted,
+            }
 
-            for gallery_name in used_galleries:
-                gallery_templates = getattr(
-                    self.test_dataset, f"{gallery_name}_templates"
-                )
-                gallery_subject_ids = getattr(self.test_dataset, f"{gallery_name}_ids")
-                if (template_subsets_path / f"gallery_{gallery_name}.npz").is_file():
-                    data = np.load(
-                        template_subsets_path / f"gallery_{gallery_name}.npz"
-                    )
-                    gallery_features = data["gallery_features"]
-                    gallery_unc = data["gallery_unc"]
-                    gallery_medias = data["gallery_medias"]
-                    gallery_templates_sorted = data["gallery_templates_sorted"]
-                    gallery_subject_ids_sorted = data["gallery_subject_ids_sorted"]
-                else:
-                    (
-                        gallery_features,
-                        gallery_unc,
-                        gallery_medias,
-                        gallery_templates_sorted,
-                        gallery_subject_ids_sorted,
-                    ) = get_template_subsets(
-                        self.image_input_feats,
-                        self.unc,
-                        self.test_dataset.templates,
-                        self.test_dataset.medias,
-                        gallery_subject_ids,
-                        gallery_templates,
-                    )
-                    np.savez(
-                        template_subsets_path / f"gallery_{gallery_name}.npz",
-                        gallery_features=gallery_features,
-                        gallery_unc=gallery_unc,
-                        gallery_medias=gallery_medias,
-                        gallery_templates_sorted=gallery_templates_sorted,
-                        gallery_subject_ids_sorted=gallery_subject_ids_sorted,
-                    )
-                # 1. pool selected gallery templates
-                # assert gallery_unc.shape[1] == 1  # working with scf unc
-                gallery_unc = np.exp(gallery_unc)
-                # kappa = np.exp(gallery_unc)
-                if (
-                    template_pool_path / f"gallery_{gallery_name}.npz"
-                ).is_file() and self.recompute_template_pooling is False:
-                    print("Loading pool")
-                    data = np.load(template_pool_path / f"gallery_{gallery_name}.npz")
-                    pooled_data = (
+            # 2. pool probe templates using 'gallery_name' gallery
+            if "PoolingProb" in self.probe_template_pooling_strategy.__class__.__name__:
+                if (template_pool_path / f"probe_{gallery_name}.npz").is_file():
+                    data = np.load(template_pool_path / f"probe_{gallery_name}.npz")
+                    probe_pooled_data = (
                         data["template_pooled_features"],
                         data["template_pooled_data_unc"],
                     )
                 else:
-                    pooled_data = self.gallery_template_pooling_strategy(
-                        gallery_features,
-                        gallery_unc,
-                        gallery_templates_sorted,
-                        gallery_medias,
+                    self.recognition_method.setup(
+                        probe_features,
+                        probe_unc,
+                        self.gallery_pooled_templates[gallery_name][
+                            "template_pooled_features"
+                        ],
+                        self.gallery_pooled_templates[gallery_name][
+                            "template_pooled_data_unc"
+                        ],
+                        g_unique_ids=self.gallery_pooled_templates[gallery_name][
+                            "template_subject_ids_sorted"
+                        ],
+                        probe_unique_ids=self.test_dataset.probe_ids,
                     )
-                    np.savez(
-                        template_pool_path / f"gallery_{gallery_name}.npz",
-                        template_pooled_features=pooled_data[0],
-                        template_pooled_data_unc=pooled_data[1],
-                    )
-                self.gallery_pooled_templates[gallery_name] = {
-                    "template_pooled_features": pooled_data[0],
-                    "template_pooled_data_unc": pooled_data[1],
-                    "template_subject_ids_sorted": gallery_subject_ids_sorted,
-                }
+                    predicted_id, was_rejected = self.recognition_method.predict()
 
-                # 2. pool probe templates using 'gallery_name' gallery
-                if (
-                    "PoolingProb"
-                    in self.probe_template_pooling_strategy.__class__.__name__
-                ):
-                    if (template_pool_path / f"probe_{gallery_name}.npz").is_file():
-                        data = np.load(template_pool_path / f"probe_{gallery_name}.npz")
-                        probe_pooled_data = (
-                            data["template_pooled_features"],
-                            data["template_pooled_data_unc"],
-                        )
-                    else:
-                        self.recognition_method.setup(
-                            probe_features,
-                            probe_unc,
-                            self.gallery_pooled_templates[gallery_name][
-                                "template_pooled_features"
-                            ],
-                            self.gallery_pooled_templates[gallery_name][
-                                "template_pooled_data_unc"
-                            ],
+                    predicted_unc = self.recognition_method.predict_uncertainty()
+                    for metric in self.recognition_metrics[self.task_type]:
+                        metric(
+                            predicted_id=predicted_id,
+                            was_rejected=was_rejected,
                             g_unique_ids=self.gallery_pooled_templates[gallery_name][
                                 "template_subject_ids_sorted"
                             ],
                             probe_unique_ids=self.test_dataset.probe_ids,
+                            predicted_unc=predicted_unc,
+                            method_name=self.pretty_name + "_bf-pool",
+                            far=self.recognition_method.far,
                         )
-                        predicted_id, was_rejected = self.recognition_method.predict()
+                    probe_pooled_data = self.probe_template_pooling_strategy(
+                        probe_features,
+                        -predicted_unc,
+                        probe_unc,
+                        probe_templates_sorted,
+                        probe_medias,
+                    )
+                    self.recognition_method.gallery_kappa = None
 
-                        predicted_unc = self.recognition_method.predict_uncertainty()
-                        for metric in self.recognition_metrics[self.task_type]:
-                            metric(
-                                predicted_id=predicted_id,
-                                was_rejected=was_rejected,
-                                g_unique_ids=self.gallery_pooled_templates[
-                                    gallery_name
-                                ]["template_subject_ids_sorted"],
-                                probe_unique_ids=self.test_dataset.probe_ids,
-                                predicted_unc=predicted_unc,
-                                method_name=self.pretty_name + "_bf-pool",
-                                far=self.recognition_method.far,
-                            )
-                        probe_pooled_data = self.probe_template_pooling_strategy(
-                            probe_features,
-                            -predicted_unc,
-                            probe_unc,
-                            probe_templates_sorted,
-                            probe_medias,
-                        )
-                        self.recognition_method.gallery_kappa = None
-
+            else:
+                # log scf pool as it is not changing
+                print("Loading pool probe")
+                if (template_pool_path / f"probe_{gallery_name}.npz").is_file():
+                    data = np.load(template_pool_path / f"probe_{gallery_name}.npz")
+                    probe_pooled_data = (
+                        data["template_pooled_features"],
+                        data["template_pooled_data_unc"],
+                    )
                 else:
-                    # log scf pool as it is not changing
-                    print("Loading pool probe")
-                    if (template_pool_path / f"probe_{gallery_name}.npz").is_file():
-                        data = np.load(template_pool_path / f"probe_{gallery_name}.npz")
-                        probe_pooled_data = (
-                            data["template_pooled_features"],
-                            data["template_pooled_data_unc"],
-                        )
-                    else:
-                        probe_pooled_data = self.probe_template_pooling_strategy(
-                            probe_features,
-                            probe_unc,
-                            probe_templates_sorted,
-                            probe_medias,
-                        )
-                        np.savez(
-                            template_pool_path / f"probe_{gallery_name}.npz",
-                            template_pooled_features=probe_pooled_data[0],
-                            template_pooled_data_unc=probe_pooled_data[1],
-                        )
+                    probe_pooled_data = self.probe_template_pooling_strategy(
+                        probe_features,
+                        probe_unc,
+                        probe_templates_sorted,
+                        probe_medias,
+                    )
+                    np.savez(
+                        template_pool_path / f"probe_{gallery_name}.npz",
+                        template_pooled_features=probe_pooled_data[0],
+                        template_pooled_data_unc=probe_pooled_data[1],
+                    )
 
-                self.probe_pooled_templates[gallery_name] = {
-                    "template_pooled_features": probe_pooled_data[0],
-                    "template_pooled_data_unc": probe_pooled_data[1],
-                    "template_subject_ids_sorted": probe_subject_ids_sorted,
-                }
+            self.probe_pooled_templates[gallery_name] = {
+                "template_pooled_features": probe_pooled_data[0],
+                "template_pooled_data_unc": probe_pooled_data[1],
+                "template_subject_ids_sorted": probe_subject_ids_sorted,
+            }
 
     def predict_and_compute_metrics(self):
         return getattr(self, f"run_model_test_{self.task_type}")()

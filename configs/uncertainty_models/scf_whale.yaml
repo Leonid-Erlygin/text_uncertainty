@@ -51,8 +51,8 @@ model:
     scheduler_params:
         scheduler: OneCycleLR
         params:
-            max_lr: 3e-4
-            steps_per_epoch: 256 
+            max_lr: 3e-3
+            steps_per_epoch: 3190
             epochs: 2
             div_factor: 1e1
             final_div_factor: 1e2

@@ -200,7 +200,6 @@ class BernoulliVarianceReject:
         probe_score_norm = (probe_score + 1) / 2
         unc_score = probe_score_norm * (1 - probe_score_norm)
         unc_metric_name = self.__class__.__name__
-        # unc_metric_name = r"$m(p) = \frac{s(p)+1}{2}\left(1 - \frac{s(p)+1}{2}\right)$" #
         unc_metric = get_reject_metrics(
             unc_metric_name,
             unc_score,
@@ -233,7 +232,6 @@ class MaxProb:
     ) -> Any:
         unc_score = -np.max(similarity, axis=1)
         unc_metric_name = self.__class__.__name__
-        # unc_metric_name = r"$m(p) = \max_{c\in {1,\dots,K+1}}p(c|z)$"
         unc_metric = get_reject_metrics(
             unc_metric_name,
             unc_score,
@@ -266,7 +264,6 @@ class MeanDistanceReject:
         mean_probe_score = np.mean(probe_score)
         unc_score = -np.abs(probe_score - mean_probe_score)
         unc_metric_name = self.__class__.__name__
-        # unc_metric_name = r"$m(p) = \left|s(p)-\frac{1}{N}\sum_{p\in TestSet}s(p)\right|$" #
         unc_metric = get_reject_metrics(
             unc_metric_name,
             unc_score,
