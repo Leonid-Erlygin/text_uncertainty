@@ -3,7 +3,7 @@ cache
 sandbox
 scripts/old_scripts
 configs/uncertainty_benchmark/legacy
-configs/train/old_cfg
+configs/uncertainty_models/old_cfg
 multirun
 .hydra
 .vscode

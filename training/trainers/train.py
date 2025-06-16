@@ -9,7 +9,7 @@ import hydra
 from hydra.utils import instantiate
 
 
-@hydra.main(version_base=None, config_path="/app/configs/train")
+@hydra.main(version_base=None, config_path="/app/configs/uncertainty_models")
 def train_model(cfg):
     print(cfg)
     seed_everything(cfg.seed_everything, workers=True)
