@@ -60,7 +60,7 @@ class PosteriorProbability(OpenSetMethod):
         alpha: float,
         aggregation: str,
         class_model: str,
-        T: Union[float, List[float]],
+        predict_T: float,
         T_data_unc: float,
         far: float = None,
         gallery_kappa: float = None,
@@ -81,7 +81,7 @@ class PosteriorProbability(OpenSetMethod):
         self.all_classes_log_prob = None
         self.class_model = class_model
         self.C = 0.5
-        self.T = T
+        self.predict_T = predict_T
         self.gallery_kappa = gallery_kappa
         self.T_data_unc = T_data_unc
         self.calibrate_unc = calibrate_unc
@@ -122,7 +122,7 @@ class PosteriorProbability(OpenSetMethod):
                 gallery_unc,
             )
         )
-        T = self.T
+        T = self.predict_T
         # find kappa
         is_seen = np.isin(probe_unique_ids, g_unique_ids)
 

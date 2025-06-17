@@ -12,7 +12,7 @@ defaults:
   - meta_data@metric_order: metric_order
 
 
-datasets: ["IJBC"] #["IJBC", "IJBB", "whale"]
+datasets: ["IJBC", "IJBB", "whale"]
 
 task: filter
 
