@@ -41,13 +41,13 @@ class FarLossCalc:
         all_classes_log_prob = posterior_prob.compute_all_class_log_probabilities(
             self.similarity_matrix, self.T
         )
-        print(all_classes_log_prob.min())
+        # print(all_classes_log_prob.min())
         all_classes_log_prob = torch.mean(all_classes_log_prob, dim=1).numpy()
         was_rejected = np.argmax(all_classes_log_prob, axis=-1) == (
             all_classes_log_prob.shape[-1] - 1
         )
         far = np.mean(was_rejected[~self.is_seen] == False)
-        print(f"Found kappa {np.round(kappa,4)} for far {far}")
+        # print(f"Found kappa {np.round(kappa,4)} for far {far}")
         return -np.abs(far - self.target_far) / self.target_far
 
 
@@ -103,6 +103,7 @@ class PosteriorProbability(OpenSetMethod):
         gallery_unc: np.ndarray,
         g_unique_ids: np.ndarray,
         probe_unique_ids: np.ndarray,
+        dataset_name: str,
     ):
         """
         g_unique_ids and probe_unique_ids are needed to find kappa that gives certan self.far
@@ -126,9 +127,9 @@ class PosteriorProbability(OpenSetMethod):
         is_seen = np.isin(probe_unique_ids, g_unique_ids)
 
         if self.gallery_kappa is None:
-            kappa_low = 800
+            kappa_low = 300
             kappa_high = 10000
-            max_iter = 15
+            max_iter = 20
             eps = 0.0005
             far_loss_func = FarLossCalc(
                 self.beta, T, self.class_model, self.far, is_seen, similarity_matrix

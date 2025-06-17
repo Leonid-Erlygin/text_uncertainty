@@ -51,6 +51,7 @@ class SimilarityBasedPrediction(OpenSetMethod):
         gallery_unc: np.ndarray,
         g_unique_ids: np.ndarray,
         probe_unique_ids: np.ndarray,
+        dataset_name: str,
     ):
         if self.far is None:
             raise ValueError

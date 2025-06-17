@@ -11,7 +11,6 @@ from evaluation.metrics import FrrFarIdent
 from utils.golden_section import golden_selection_search
 
 
-# from evaluation.template_pooling_strategies import PoolingDefault
 from evaluation.open_set_methods.calibration_utils import prepare_calibration_dataset
 from pathlib import Path
 
@@ -43,6 +42,7 @@ class FarLossCalc:
         target_far,
         is_seen,
         env,
+        verbose=False,
     ) -> None:
         self.probe_feats = probe_feats
         self.probe_unc_scaled = probe_unc_scaled
@@ -52,6 +52,7 @@ class FarLossCalc:
         self.target_far = target_far
         self.is_seen = is_seen
         self.env = env
+        self.verbose = verbose
 
     def __call__(self, kappa: float) -> float:
         gallery_unc_scaled = np.ones_like(self.gallery_unc) * kappa
@@ -68,18 +69,19 @@ class FarLossCalc:
         all_prob = np.concatenate([mean_probs, oog_prob], axis=-1)
         was_rejected = np.argmax(all_prob, axis=-1) == (all_prob.shape[-1] - 1)
         far = np.mean(was_rejected[~self.is_seen] == False)
-        print(f"Found kappa {np.round(kappa,4)} for far {far}")
+        if self.verbose:
+            print(f"Found kappa {np.round(kappa,4)} for far {far}")
         return -np.abs(far - self.target_far) / self.target_far
 
 
 class MonteCarloPredictiveProb:
     def __init__(
         self,
-        M: int,
         gallery_prior: str,
         emb_unc_model: str,
         beta: float,
         far: float,
+        M: int = 0,
         calibration_set=None,
         calibration_embs_name=None,
         calibration_transform=None,
@@ -120,11 +122,8 @@ class MonteCarloPredictiveProb:
         assert self.pred_uncertainty_type in ["entropy", "max_prob"]
         self.alpha = alpha
         self.log_dir = log_dir
-        if calibration_set is None:
-            return
-        self.gallery_pooled_templates_calib, self.probe_pooled_templates_calib = (
-            prepare_calibration_dataset(calibration_set, calibration_embs_name)
-        )
+        self.calibration_set = calibration_set
+        self.calibration_embs_name = calibration_embs_name
         self.calibration_transform = calibration_transform
 
     def setup(
@@ -133,6 +132,7 @@ class MonteCarloPredictiveProb:
         probe_unc: np.ndarray,
         gallery_feats: np.ndarray,
         gallery_unc: np.ndarray,
+        dataset_name: str,
         g_unique_ids: np.ndarray = None,
         probe_unique_ids: np.ndarray = None,
     ):
@@ -144,14 +144,10 @@ class MonteCarloPredictiveProb:
         gallery_unc = gallery_unc.astype(dtype)
         self.g_unique_ids = g_unique_ids
         self.probe_unique_ids = probe_unique_ids
-
+        self.dataset_name = dataset_name
         if g_unique_ids is not None and self.gallery_kappa == None:
             # find kappa
             is_seen = np.isin(probe_unique_ids, g_unique_ids)
-            # kappa_low = 300
-            # kappa_high = 1800
-            # kappa_low = 2000
-            # kappa_high = 2001
             kappa_low = 300
             kappa_high = 10000
             max_iter = 15
@@ -169,7 +165,7 @@ class MonteCarloPredictiveProb:
             self.gallery_kappa = golden_selection_search(
                 kappa_high, kappa_low, eps, max_iter, far_loss_func
             )
-            # print(f"Found kappa {np.round(self.gallery_kappa,4)} for far {self.far}")
+            print(f"Found kappa {np.round(self.gallery_kappa,4)} for far {self.far}")
 
         gallery_unc_scaled = np.ones_like(gallery_unc) * self.gallery_kappa
 
@@ -183,7 +179,13 @@ class MonteCarloPredictiveProb:
         self.mean_probs, self.kl_1, self.kl_2 = [x.cpu().detach().numpy() for x in out]
 
         # get calibration set kl
-        if self.gallery_pooled_templates_calib is not None:
+        if self.calibration_set is not None:
+            self.gallery_pooled_templates_calib, self.probe_pooled_templates_calib = (
+                prepare_calibration_dataset(
+                    self.calibration_set, self.calibration_embs_name
+                )
+            )
+            self.calibration_transform = self.calibration_transform
             self.data_uncertainty_calib = self.probe_pooled_templates_calib["g1"][
                 "template_pooled_data_unc"
             ]
@@ -210,9 +212,9 @@ class MonteCarloPredictiveProb:
             gallery_unc_calib = self.gallery_pooled_templates_calib["g1"][
                 "template_pooled_data_unc"
             ]
-            kappa_low = 800
+            kappa_low = 200
             kappa_high = 10000
-            max_iter = 20
+            max_iter = 15
             eps = 0.0005
             far_loss_func_calib = FarLossCalc(
                 probe_feats_calib,
@@ -227,10 +229,6 @@ class MonteCarloPredictiveProb:
             calibratation_set_kappa = golden_selection_search(
                 kappa_high, kappa_low, eps, max_iter, far_loss_func_calib
             )
-            # calibratation_set_kappa = 519.1576
-            # print(
-            #     f"Found kappa_calib {np.round(calibratation_set_kappa,4)} for far {self.far}"
-            # )
             gallery_unc_scaled_calib = (
                 np.ones_like(gallery_unc_calib) * calibratation_set_kappa
             )
@@ -266,7 +264,8 @@ class MonteCarloPredictiveProb:
                 self.kl_1_calib,
                 self.kl_2_calib,
                 error_calc,
-                f"{self.far}_calibration-set",
+                dataset_name=self.calibration_set.dataset_name,
+                far=self.far,
             )
 
     def predict(self):
@@ -314,9 +313,13 @@ class MonteCarloPredictiveProb:
             true_pred_label[~error_calc.is_seen] = error_calc.true_reject
 
             unc = self.calibration_transform.apply_calibration_transform(
-                self.kl_1, self.kl_2, error_calc, f"{self.far}_test-set"
+                self.kl_1,
+                self.kl_2,
+                error_calc,
+                dataset_name=self.dataset_name,
+                far=self.far,
             )
-        return unc  # -(-unc + 2) * 0.5
+        return unc
 
     def compute_mean_probs_and_kl(
         self,

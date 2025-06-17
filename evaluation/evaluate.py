@@ -8,7 +8,7 @@ from omegaconf import OmegaConf
 from hydra.utils import instantiate
 import numpy as np
 from itertools import product
-from evaluation.face_recognition_test import Face_Fecognition_test
+from evaluation.recognition_test import Recognition_test
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -33,7 +33,6 @@ def get_args_string(d):
 def create_method_name(method, template_pooling, recognition_method):
     method_name_parts = []
     method_name_parts.append(f"pooling-with-{template_pooling.__class__.__name__}")
-    method_name_parts.append(f"use-det-score-{method.use_detector_score}")
     method_name_parts.append(f"osr-method-{recognition_method.__class__.__name__}")
     method_name = "_".join(method_name_parts)
     return method_name
@@ -139,13 +138,17 @@ def main(cfg):
         gallery_template_pooling_strategy = instantiate(
             method.gallery_template_pooling_strategy
         )
-        if hasattr(method, "probe_template_pooling_strategy"):
-            probe_template_pooling_strategy = instantiate(
-                method.probe_template_pooling_strategy
-            )
-        else:
-            probe_template_pooling_strategy = None
+        probe_template_pooling_strategy = instantiate(
+            method.probe_template_pooling_strategy
+        )
         recognition_method = instantiate(method.recognition_method)
+        # add calibration set
+        if (
+            hasattr(recognition_method, "calibration_set")
+            and recognition_method.calibration_set is True
+        ):
+            calib_set = getattr(cfg.dataset_name_to_calibration_set, dataset_name)
+            recognition_method.calibration_set = instantiate(calib_set)
         # set far value
         recognition_method.far = far
         recognition_method.beta = beta
@@ -170,14 +173,14 @@ def main(cfg):
                 )
                 + f"_{pretty_name}"
             )
-        print(method_name)
+        print(f"method: {method_name} far: {far}")
         pretty_names[task_type][method_name] = pretty_name
         embeddings_path = (
             Path(test_dataset.dataset_path)
             / f"embeddings/{method.embeddings}_embs_{dataset_name}.npz"
         )
         # create tester
-        tt = Face_Fecognition_test(
+        tt = Recognition_test(
             task_type=task_type,
             method_name=method_name,
             pretty_name=pretty_name,
@@ -187,7 +190,6 @@ def main(cfg):
             embeddings_path=embeddings_path,
             gallery_template_pooling_strategy=gallery_template_pooling_strategy,
             probe_template_pooling_strategy=probe_template_pooling_strategy,
-            use_detector_score=method.use_detector_score,
             use_two_galleries=cfg.use_two_galleries,
             recompute_template_pooling=cfg.recompute_template_pooling,
             recognition_metrics=recognition_metrics,

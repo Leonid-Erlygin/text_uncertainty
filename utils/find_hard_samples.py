@@ -1,7 +1,7 @@
 from pathlib import Path
 import hydra
 from hydra.utils import instantiate
-from evaluation.face_recognition_test import Face_Fecognition_test
+from evaluation.recognition_test import Recognition_test
 from evaluation.evaluate import instantiate_list, init_methods
 from shutil import copyfile, rmtree
 import seaborn as sns
@@ -121,7 +121,7 @@ def main(cfg):
             Path(test_dataset.dataset_path)
             / f"embeddings/{methods[0].embeddings}_embs_{dataset_name}.npz"
         )
-        tt = Face_Fecognition_test(
+        tt = Recognition_test(
             task_type=tasks_names[0],
             method_name="test",
             recognition_method=None,

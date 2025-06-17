@@ -163,7 +163,8 @@ class NNcalibration:
         self.normalize_kl_by_test = normalize_kl_by_test
         self.train_weight = train_weight
 
-    def train_calibration_parameters(self, kl_1, kl_2, error_calc, save_name):
+    def train_calibration_parameters(self, kl_1, kl_2, error_calc, dataset_name, far):
+        self.val_ds_name = dataset_name
         X = torch.tensor(
             np.concatenate([kl_1[None, :], kl_2[None, :]], axis=0).T,
             dtype=torch.float32,
@@ -205,7 +206,6 @@ class NNcalibration:
             "frequency": 1,
         }
 
-        # loss_fn = nn.BCELoss(weight=weights)
         loss_fn = nn.BCELoss(reduce=False)
         self.perceptron.train()
 
@@ -273,9 +273,9 @@ class NNcalibration:
             # )
             # print(torch.sigmoid(weight).item())
         # draw probs
-        self.draw_dencity_plot(X_norm.cpu(), error_calc, save_name)
+        self.draw_dencity_plot(X_norm.cpu(), error_calc, dataset_name, far, is_val=True)
 
-    def apply_calibration_transform(self, kl_1, kl_2, error_calc, save_name):
+    def apply_calibration_transform(self, kl_1, kl_2, error_calc, dataset_name, far):
 
         X = torch.tensor(
             np.concatenate([kl_1[None, :], kl_2[None, :]], axis=0).T,
@@ -290,11 +290,13 @@ class NNcalibration:
             X_norm = (X - self.X_mean_val) / self.X_std_val
         self.perceptron.eval()
         predictions_perceptron = self.perceptron(X_norm)
-        self.draw_dencity_plot(X_norm.cpu(), error_calc, save_name)
+        self.draw_dencity_plot(
+            X_norm.cpu(), error_calc, dataset_name, far, is_val=False
+        )
         unc = -predictions_perceptron.detach().cpu().numpy()
         return unc
 
-    def draw_dencity_plot(self, X_norm, error_calc, image_name):
+    def draw_dencity_plot(self, X_norm, error_calc, dataset_name, far, is_val):
         true_pred = np.zeros(error_calc.is_seen.shape[0])
         true_pred[error_calc.is_seen] = error_calc.true_accept_true_ident
         true_pred[~error_calc.is_seen] = error_calc.true_reject
@@ -351,9 +353,14 @@ class NNcalibration:
             s=10,
             alpha=0.5,
         )
-        log_dir = Path(self.log_dir) / "calibration_images"
+        log_dir = (
+            Path(self.log_dir) / "calibration_images" / self.val_ds_name / str(far)
+        )
         log_dir.mkdir(parents=True, exist_ok=True)
-        plt.savefig(log_dir / f"{image_name}.png")
+        if is_val:
+            plt.savefig(log_dir / f"val.png")
+        else:
+            plt.savefig(log_dir / f"{dataset_name}.png")
 
 
 class Standartization:

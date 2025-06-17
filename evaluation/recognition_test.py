@@ -7,7 +7,7 @@ from .test_datasets import FaceRecogntionDataset
 from .embedding_utils import get_template_subsets
 
 
-class Face_Fecognition_test:
+class Recognition_test:
     def __init__(
         self,
         task_type: str,
@@ -17,12 +17,12 @@ class Face_Fecognition_test:
         test_dataset: FaceRecogntionDataset,
         embedding_type: str,
         embeddings_path: str,
-        use_detector_score: bool,
         use_two_galleries: bool,
         recompute_template_pooling: bool,
         recognition_metrics: dict,
         uncertainty_metrics: dict,
         gallery_template_pooling_strategy,
+        use_detector_score: bool = False,
         probe_template_pooling_strategy=None,
     ):
         self.task_type = task_type
@@ -78,12 +78,10 @@ class Face_Fecognition_test:
             / Path(self.embedding_type)
             / f"template_pool-{self.gallery_template_pooling_strategy.__class__.__name__}_{self.test_dataset.dataset_name}"
         )
-        # print(template_pool_path)
         template_pool_path.mkdir(parents=True, exist_ok=True)
         if (
             template_pool_path / f"pool.npz"
         ).is_file() and self.recompute_template_pooling is False:
-            print("Loading pool")
             data = np.load(template_pool_path / f"pool.npz")
             pooled_data = (
                 data["template_pooled_features"],
@@ -131,7 +129,6 @@ class Face_Fecognition_test:
         template_subsets_path.mkdir(parents=True, exist_ok=True)
         template_pool_path.mkdir(parents=True, exist_ok=True)
 
-        print("Pooling embeddings...")
         # first pool gallery templates
         # then use them to poll probe templates
         # probe templates should be pooled using appropriate gallery
@@ -228,7 +225,6 @@ class Face_Fecognition_test:
             if (
                 template_pool_path / f"gallery_{gallery_name}.npz"
             ).is_file() and self.recompute_template_pooling is False:
-                print("Loading pool")
                 data = np.load(template_pool_path / f"gallery_{gallery_name}.npz")
                 pooled_data = (
                     data["template_pooled_features"],
@@ -301,7 +297,6 @@ class Face_Fecognition_test:
 
             else:
                 # log scf pool as it is not changing
-                print("Loading pool probe")
                 if (template_pool_path / f"probe_{gallery_name}.npz").is_file():
                     data = np.load(template_pool_path / f"probe_{gallery_name}.npz")
                     probe_pooled_data = (
@@ -358,6 +353,7 @@ class Face_Fecognition_test:
                 probe_unique_ids=self.probe_pooled_templates[gallery_name][
                     "template_subject_ids_sorted"
                 ],
+                dataset_name=self.test_dataset.dataset_name,
             )
             predicted_id, was_rejected = self.recognition_method.predict()
             predicted_unc = self.recognition_method.predict_uncertainty()
@@ -433,7 +429,6 @@ class Face_Fecognition_test:
 
         metrics = {}
         for metric in self.recognition_metrics[self.task_type]:
-            print(metric)
             metrics.update(
                 metric(
                     scores=scores,
