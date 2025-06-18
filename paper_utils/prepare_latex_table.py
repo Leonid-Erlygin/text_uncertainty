@@ -71,9 +71,7 @@ def create_table_body(result_latex_code, cfg):
     dataset_to_metrics = {}
     dataset_to_best_values = {}
     for dataset in cfg.datasets:
-        used_columns = cfg.used_columns = OmegaConf.to_container(cfg.used_columns_dict)[
-            cfg.task
-        ][dataset]
+        used_columns = OmegaConf.to_container(cfg.used_columns_dict)[cfg.task][dataset]
         table_path = cfg.metric_table_path.format(dataset=dataset)
         all_metric_values = pd.read_csv(table_path)
         all_metric_values = all_metric_values.drop(
@@ -82,20 +80,16 @@ def create_table_body(result_latex_code, cfg):
                 | (all_metric_values["models"] == "Oracle")
             ].index
         )
-        dataset_to_metrics[dataset] = all_metric_values
+        dataset_to_metrics[dataset] = all_metric_values[used_columns]
         dataset_to_best_values[dataset] = compute_best_values(
             all_metric_values[used_columns], cfg.metric_order
         )
-    table = (
-        dataset_to_metrics[cfg.datasets[0]]
-        .set_index("models")
-        .drop("Unnamed: 0", axis=1)
-    )
+    table = dataset_to_metrics[cfg.datasets[0]].set_index("models")
     best_values = pd.DataFrame(dataset_to_best_values[cfg.datasets[0]])
     for i in range(len(cfg.datasets) - 1):
         next_table = dataset_to_metrics[cfg.datasets[i + 1]]
-        next_table = next_table.set_index("models").drop("Unnamed: 0", axis=1)
-        table = pd.concat([table, next_table], join="inner", axis=1)
+        next_table = next_table.set_index("models")
+        table = pd.concat([table, next_table], axis=1)
         next_table_best = pd.DataFrame(dataset_to_best_values[cfg.datasets[i + 1]])
         best_values = pd.concat([best_values, next_table_best], join="inner", axis=1)
     table = table.reset_index()

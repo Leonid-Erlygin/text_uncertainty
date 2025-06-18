@@ -12,25 +12,23 @@ defaults:
   - meta_data@metric_order: metric_order
 
 
-datasets: ["IJBC", "IJBB", "whale"]
+datasets: ["IJBC", "IJBB", "whale", "large_12k-perspk5"]
 
 task: filter
 
 # CHANGE
-#metric_table_path: outputs/experiments/whale/open_set_identification/{dataset}/filter_tabels/f1_class_prr_filtering.csv
-metric_table_path: /app/outputs/experiments/scale_face/open_set_identification/IJBC/filter_tabels/f1_class_prr_filtering.csv
+metric_table_path: /app/outputs/experiments/filter/open_set_identification/{dataset}/filter_tabels/f1_class_prr_filtering.csv
 
 caption: >
-  Prediction Rejection Ratios (PRR) for $F_1$ filtering curve for the three considered datasets IJB-C, IJB-B, Whale.
+  Prediction Rejection Ratios (PRR, $\uparrow$) for $F_1$ filtering curve for the four considered datasets IJB-C, IJB-B, Whale, VB-Eval-L.
   
 fix_table: False
 table_lable: "tab:${task}"
 round_num: 2
 table_size: footnotesize
-tabcolsep: 3
+tabcolsep: 2
 use_adjustbox: False
 
-used_columns: []
 sort_models_with: "used_models"
 
 used_columns_dict:
@@ -38,22 +36,16 @@ used_columns_dict:
     whale:
       [
         "models",
-        #"FAR=0.01",
         "FAR=0.05",
         "FAR=0.1",
         "FAR=0.2",
-        #"FAR=0.25",
-        # "FAR=0.3",
       ]
     IJBB:
       [
         "models",
-        #"FAR=0.01",
         "FAR=0.05",
         "FAR=0.1",
         "FAR=0.2",
-        #"FAR=0.25",
-        # "FAR=0.3",
       ]
     IJBC:
       [
@@ -61,6 +53,13 @@ used_columns_dict:
         "FAR=0.05",
         "FAR=0.1",
         "FAR=0.2"
+      ]
+    large_12k-perspk5:
+      [
+        "models",
+        "FAR=0.01",
+        "FAR=0.05",
+        "FAR=0.1",
       ]
 
 

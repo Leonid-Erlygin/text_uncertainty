@@ -149,7 +149,7 @@ def main(cfg):
         ):
             calib_set = getattr(cfg.dataset_name_to_calibration_set, dataset_name)
             recognition_method.calibration_set = instantiate(calib_set)
-        if hasattr(recognition_method, "predict_T"):
+        if method.pretty_name == "GalUE":
             predict_T = getattr(cfg.dataset_name_to_T_scale, dataset_name)
             recognition_method.predict_T = predict_T
         # set far value
