@@ -2,7 +2,7 @@
 hydra:
   run:
     dir: ${exp_dir}
-exp_dir: outputs/latex_tables/${now:%Y-%m-%d_%H-%M-%S}
+exp_dir: outputs/latex_tables
 
 defaults:
   - _self_
@@ -15,7 +15,7 @@ defaults:
 datasets: ["IJBC"]
 task: filter
 
-metric_table_path: outputs/experiments/mc_kl_compare_norm/open_set_identification/{dataset}/filter_tabels/f1_class_prr_filtering.csv
+metric_table_path: outputs/experiments/compare_norms/open_set_identification/{dataset}/filter_tabels/f1_class_prr_filtering.csv
 
 caption: >
   Prediction Rejection Ratio (PRR) of $F_1$ filtering curve on IJB-C dataset.

@@ -370,7 +370,7 @@ class Standartization:
         self.vis = vis
         self.device = torch.device("cpu")
 
-    def train_calibration_parameters(self, kl_1, kl_2, error_calc, save_name):
+    def train_calibration_parameters(self, kl_1, kl_2, error_calc, dataset_name, far):
         X = torch.tensor(
             np.concatenate([kl_1[None, :], kl_2[None, :]], axis=0).T,
             dtype=torch.float32,
@@ -386,9 +386,11 @@ class Standartization:
 
         # draw probs
         if self.vis:
-            self.draw_dencity_plot(X_norm.cpu(), error_calc, save_name)
+            self.draw_dencity_plot(
+                X_norm.cpu(), error_calc, dataset_name, far, is_val=False
+            )
 
-    def apply_calibration_transform(self, kl_1, kl_2, error_calc, save_name):
+    def apply_calibration_transform(self, kl_1, kl_2, error_calc, dataset_name, far):
 
         X = torch.tensor(
             np.concatenate([kl_1[None, :], kl_2[None, :]], axis=0).T,
@@ -402,12 +404,14 @@ class Standartization:
         else:
             X_norm = (X - self.X_mean_val) / self.X_std_val
         if self.vis:
-            self.draw_dencity_plot(X_norm.cpu(), error_calc, save_name)
-        kl_sum = torch.sum(X_norm, dim=1)  # self.perceptron(X_norm)
+            self.draw_dencity_plot(
+                X_norm.cpu(), error_calc, dataset_name, far, is_val=True
+            )
+        kl_sum = torch.sum(X_norm, dim=1)
         unc = -kl_sum.detach().cpu().numpy()
         return unc
 
-    def draw_dencity_plot(self, X_norm, error_calc, image_name):
+    def draw_dencity_plot(self, X_norm, error_calc, dataset_name, far, is_val):
         true_pred = np.zeros(error_calc.is_seen.shape[0])
         true_pred[error_calc.is_seen] = error_calc.true_accept_true_ident
         true_pred[~error_calc.is_seen] = error_calc.true_reject
@@ -463,6 +467,11 @@ class Standartization:
             s=10,
             alpha=0.5,
         )
-        log_dir = Path(self.log_dir) / "calibration_images"
+        log_dir = (
+            Path(self.log_dir) / "calibration_images" / self.val_ds_name / str(far)
+        )
         log_dir.mkdir(parents=True, exist_ok=True)
-        plt.savefig(log_dir / f"{image_name}.png")
+        if is_val:
+            plt.savefig(log_dir / f"val.png")
+        else:
+            plt.savefig(log_dir / f"{dataset_name}.png")

@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 import hydra
+from hydra.core.hydra_config import HydraConfig
 from omegaconf import OmegaConf
 
 
@@ -157,10 +158,11 @@ def run(cfg):
     result_latex_code = create_table_tail(result_latex_code, cfg)
 
     # save result
-    with open(Path(cfg.exp_dir) / "table.tex", "w") as fd:
+    hydra_cfg = HydraConfig.get()
+    with open(str(Path(cfg.exp_dir) / f"{hydra_cfg.job.config_name}.tex"), "w") as fd:
         fd.write(result_latex_code)
     print("Out file:")
-    print(str(Path(cfg.exp_dir) / "table.tex"))
+    print(str(Path(cfg.exp_dir) / f"{hydra_cfg.job.config_name}.tex"))
 
 
 if __name__ == "__main__":
