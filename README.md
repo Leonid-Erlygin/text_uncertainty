@@ -1,13 +1,14 @@
 # Holistic Uncertainty Estimation For Open-Set Recognition
-
-<!-- ### System Requirements
-- **Docker Version**: 25.0.3
-- **CUDA Version**: 12.2 -->
-
+This repository contains implemetation of the methods described in the paper.   
 ### Repository Setup Steps
 
-<!-- 1. **Downloading Datasets**:
-   - Use the provided link to download the datasets: [Yandex Disk Link](https://disk.yandex.ru/d/TjOwePopUJmbpA)
+1. **Downloading Datasets and model weighs**:  
+You can [download](https://drive.google.com/file/d/1NhhQ76lhjP2PLuEB_XcrMrVA3-2Bk8NE/view?usp=sharing) OSR protocols and precomputed embeddings for 4 datasets: IJB-B, IJB-C, Whale and VB-Eval.
+
+This data is sufficiet to reproduce tables and figures from the paper
+We also provide checkpoints for pretrained sample quality estimators: SCF, PFE and ScaleFace. 
+https://drive.google.com/file/d/11zTq8NOJcxg3Bst6_KHXtJvPKCg9hgCx/view?usp=sharing
+
    - Extract the `datasets` folder and place it in the root directory of the project. The structure should look like this:
      ```
      face_ue
@@ -16,9 +17,9 @@
      └───datasets
      │
      │   ...
-     ``` -->
+     ```
 
-2. **Building the Docker Image**:
+1. **Building the Docker Image**:
    - Navigate to the `docker_scripts` directory and run the build script:
      ```bash
      cd docker_scripts
@@ -26,13 +27,16 @@
      ```
    - The image building process takes approximately 10 minutes and will install all necessary dependencies.
 
-3. **(Optional) Creating a Development Container**:
+2. **(Optional) Creating a Development Container**:
    - If you want to create a container for development, execute the following commands:
      ```bash
      cd docker_scripts
      bash launch_container.sh
      ```
    - After running the above commands, you can connect to the container using Visual Studio Code (VSCode).
+
+### Sample quality estimators
+
 
 ### Method Evaluation
 
