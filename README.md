@@ -1,20 +1,16 @@
 # Holistic Uncertainty Estimation For Open-Set Recognition
 This repository contains implemetation of the methods described in the paper.   
-### Repository Setup Steps
+## Repository Setup Steps
 
-1. **Downloading Datasets and model weighs**:  
-You can [download](https://drive.google.com/file/d/1NhhQ76lhjP2PLuEB_XcrMrVA3-2Bk8NE/view?usp=sharing) OSR protocols and precomputed embeddings for 4 datasets: IJB-B, IJB-C, Whale and VB-Eval.
-
-This data is sufficiet to reproduce tables and figures from the paper
-We also provide checkpoints for pretrained sample quality estimators: SCF, PFE and ScaleFace. 
-https://drive.google.com/file/d/11zTq8NOJcxg3Bst6_KHXtJvPKCg9hgCx/view?usp=sharing
-
-   - Extract the `datasets` folder and place it in the root directory of the project. The structure should look like this:
+1. **Downloading datasets and model weighs**:  
+You can [download](https://drive.google.com/file/d/1NhhQ76lhjP2PLuEB_XcrMrVA3-2Bk8NE/view?usp=sharing) OSR protocols and precomputed embeddings for 4 datasets: IJB-B, IJB-C, Whale and VB-Eval. This data is sufficient to reproduce tables and figures from the paper.  
+We also provide [checkpoints](https://drive.google.com/file/d/11zTq8NOJcxg3Bst6_KHXtJvPKCg9hgCx/view?usp=sharing) for pretrained sample quality estimators: SCF, PFE and ScaleFace. 
+   - Extract the `datasets` and `model_weights` folders and place them in the root directory of the project. The structure should look like this:
      ```
-     face_ue
+     project_dir
      │   README.md
-     │
      └───datasets
+     └───model_weights
      │
      │   ...
      ```
@@ -35,34 +31,23 @@ https://drive.google.com/file/d/11zTq8NOJcxg3Bst6_KHXtJvPKCg9hgCx/view?usp=shari
      ```
    - After running the above commands, you can connect to the container using Visual Studio Code (VSCode).
 
-### Sample quality estimators
+## Method Evaluation
+To create plots and tables for filtering test samples, follow these steps:  
+1. **Running the comparison of uncertainty estimation methods**:  
+   Navigate to the `scripts` directory and run the script to compute the main table (Table 1):
+   ```bash
+   cd scripts
+   bash evaluate_filtering.sh
+   ```
+   To compare normalization strategies (Table 2) run `bash evaluate_filtering.sh`.  
+2. **Storing Output**:  
+   - All plots and tables will be saved in the `outputs/experiments/filter` directory.
+   - For example, metrics of methods tested on the IJB-C datasets with a false positive identification rate (FPIR) of 0.1 will be saved in `outputs/experiments/filter/open_set_identification/IJBC/filter_plots/0.1`  
+3. **Configuration**:  
+   - The uncertainty estimation methods are described in configuration files `configs/uncertainty_benchmark/main_table.yaml` and `configs/uncertainty_benchmark/normalization_strategies.yaml`.  
+4. **(Optional) Latex tables**  
+   You can generate latex-formated table from raw .csv produces by main evaluation script with `bash create_latex_table.sh`
+
+## Sample quality estimators (SCF, PFE, ScaleFace) training and inference
 
 
-### Method Evaluation
-
-To create plots for filtering test samples, follow these steps:
-
-1. **Running the Uncertainty Estimation and Quality Metrics Script**:
-   - Navigate to the `scripts` directory and run the uncertainty estimation script on the IJBB and IJBC datasets:
-     ```bash
-     cd scripts
-     bash evaluate_filtering.sh
-     ```
-   - Navigate to the `scripts` directory and run the uncertainty estimation script on the Whale dataset:
-     ```bash
-     cd scripts
-     bash evaluate_filtering_whale.sh
-     ```
-   - The first run may take some time.
-
-2. **Storing Output**:
-   - All plots will be saved in the `outputs/experiments/filtering_plots` directory.
-   - For example, plots for the IJBC dataset will be saved in `outputs/experiments/filtering_plots/open_set_identification/IJBC/filter_plots/0.1` because the method is tested on the IJBC datasets with a False Acceptance Rate (FAR) of 0.1, as specified in the configuration.
-
-3. **Configuration**:
-   - The uncertainty estimation and quality metrics scripts will run with the configuration files `configs/uncertainty_benchmark/evaluate_filtering.yaml` and `configs/uncertainty_benchmark/evaluate_filtering_whale.yaml`.
-
-### Additional Notes
-
-- Ensure that Docker and CUDA are correctly installed and configured on your system.
-- Ensure you have sufficient disk space and memory to process the dataset and Docker image.
