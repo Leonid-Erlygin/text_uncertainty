@@ -321,7 +321,7 @@ class NNcalibration:
 
         self.perceptron.eval()
         predict_prob = self.perceptron(product)
-        z = np.reshape(predict_prob.detach().cpu().numpy(), (size, size)).T
+        z = np.reshape(predict_prob.detach().cpu().numpy(), (size, size))
         z_min, z_max = z.min(), z.max()
 
         fig, ax = plt.subplots()

@@ -12,6 +12,7 @@ from .iresnet import (
     iresnet34,
     iresnet50,
     iresnet100,
+    iresnet18_normalized,
     iresnet50_normalized,
     iresnet50_spectral_normalized,
 )
@@ -22,6 +23,7 @@ model_dict = {
     "iresnet50": iresnet50,
     "iresnet100": iresnet100,
     "iresnet50_normalized": iresnet50_normalized,
+    "iresnet18_normalized": iresnet18_normalized,
     "iresnet50_spectral_normalized": iresnet50_spectral_normalized,
 }
 

@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision.transforms import v2
 import scipy.io.wavfile as sciwav
 from python_speech_features import sigproc
+from torchvision import datasets, transforms
 
 import mxnet as mx
 import numbers
@@ -312,14 +313,14 @@ class UncertaintyDataModule(pl.LightningDataModule):
                 num_workers=self.num_workers,
             )
 
-    # def val_dataloader(self):
-    #     return DataLoader(
-    #         self.validation_dataset,
-    #         batch_size=self.batch_size,
-    #         drop_last=False,
-    #         shuffle=False,
-    #         num_workers=self.num_workers,
-    #     )
+    def val_dataloader(self):
+        return DataLoader(
+            self.validation_dataset,
+            batch_size=self.batch_size,
+            drop_last=False,
+            shuffle=False,
+            num_workers=self.num_workers,
+        )
 
     def predict_dataloader(self):
         return DataLoader(
@@ -423,6 +424,31 @@ class WhaleDataset(Dataset):
             return augmented
         else:
             return augmented, self.ids[i]
+
+
+class CIFAR10(Dataset):
+    def __init__(self, root_dir: str, train, image_size=112):
+        transform = transforms.Compose(
+            [
+                transforms.ToTensor(),
+                transforms.Resize(size=image_size),
+                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            ]
+        )
+        self.cifar_ds = datasets.CIFAR10(
+            root=root_dir, train=train, download=True, transform=transform
+        )
+        self
+
+    def __getitem__(self, index):
+        # image, label =
+        # image = cv2.resize(
+        #     image, tuple(self.cfg.image_size), interpolation=cv2.INTER_CUBIC
+        # )
+        return self.cifar_ds[index]
+
+    def __len__(self):
+        return len(self.cifar_ds)
 
 
 class VoxBlinkEmbeddingsDataset(Dataset):

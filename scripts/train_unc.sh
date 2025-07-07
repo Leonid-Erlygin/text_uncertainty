@@ -3,7 +3,7 @@ docker run \
  --memory=80g \
  --cpus=40 \
  --user ${UID}:${UID} \
- --name ${USER}_$(basename $(dirname "$PWD"))_unc_train \
+ --name ${USER}_$(basename $(dirname "$PWD"))_unc_train_2 \
  --env HYDRA_FULL_ERROR=1 \
  --env WANDB_API_KEY=$(cat /home/${USER}/face_ue/configs/wb_api.yaml) \
  --rm \
@@ -12,5 +12,5 @@ docker run \
  --gpus '"device=5"' \
  -w="/app" \
  ${USER}_$(basename $(dirname "$PWD")) \
- python3 training/trainers/train.py -cn=scf_whale # -cn=scaleface_whale #-cn=pfe_whale #-cn=scaleface_vb2 
+ python3 training/trainers/train.py -cn=arcface_cifar10 #-cn=scf_whale # -cn=scaleface_whale #-cn=pfe_whale #-cn=scaleface_vb2 
  # -cn=pfe_vb2 # -cn=scf_vb2 #-cn=scf_ms1m # -cn=scaleface_ms1m # -cn=pfe_ms1m 

@@ -118,8 +118,6 @@ class MetricLearningModel(LightningModule):
         backbone: torch.nn.Module,
         loss: torch.nn.Module,
         num_labels: int,
-        train_set: Dataset,
-        val_set: Dataset,
         scheduler_params,
         num_features: int = 2,
         batch_size: int = 128,
@@ -139,7 +137,7 @@ class MetricLearningModel(LightningModule):
         :param num_workers - number of CPUs to be used (for dataloaders)
         """
         super().__init__()
-
+        self.weight_decay = weight_decay
         self.backbone = backbone
         self.loss = loss
 
@@ -148,9 +146,6 @@ class MetricLearningModel(LightningModule):
             torch.empty((num_labels, num_features))
         )
         torch.nn.init.kaiming_uniform_(self.softmax_weights, a=math.sqrt(5))
-
-        self.train_set = train_set
-        self.val_set = val_set
         self.validation_step_outputs = []
         self.scheduler_params = scheduler_params
         self.save_hyperparameters()
@@ -215,25 +210,26 @@ class MetricLearningModel(LightningModule):
         :param outputs - List validation_step() outputs (List of dicts in our case)
         """
         # aggreaget predicted features and labels; need to use CPU for matplotlib
-        outputs = self.validation_step_outputs
-        features = (
-            torch.vstack([batch_out["out"] for batch_out in outputs]).detach().cpu()
-        )
-        labels = torch.hstack([batch_out["label"] for batch_out in outputs]).cpu()
+        # outputs = self.validation_step_outputs
+        # features = (
+        #     torch.vstack([batch_out["out"] for batch_out in outputs]).detach().cpu()
+        # )
+        # labels = torch.hstack([batch_out["label"] for batch_out in outputs]).cpu()
 
-        # get normalized softmax weights for visualization
-        weights = F.normalize(self.softmax_weights, p=2, dim=1).detach().cpu()
+        # # get normalized softmax weights for visualization
+        # weights = F.normalize(self.softmax_weights, p=2, dim=1).detach().cpu()
 
-        dists = []
-        colors = list(mcolors.TABLEAU_COLORS)[: self.hparams.num_labels]
+        # dists = []
+        # colors = list(mcolors.TABLEAU_COLORS)[: self.hparams.num_labels]
+        pass
 
     def configure_optimizers(self) -> Dict[str, torch.optim.Optimizer]:
         """Create optimizer for model training."""
         params = list(self.parameters())
         optimizer = torch.optim.AdamW(
             params,
-            lr=self.hparams.learning_rate,
-            weight_decay=self.hparams.weight_decay,
+            lr=1e-4,
+            weight_decay=self.weight_decay,
         )
         return {
             "optimizer": optimizer,
@@ -246,22 +242,22 @@ class MetricLearningModel(LightningModule):
             },
         }
 
-    def train_dataloader(self) -> DataLoader:
-        """Create training dataloader."""
-        return DataLoader(
-            self.train_set,
-            batch_size=self.hparams.batch_size,
-            shuffle=True,
-            drop_last=True,
-            num_workers=self.hparams.num_workers,
-        )
+    # def train_dataloader(self) -> DataLoader:
+    #     """Create training dataloader."""
+    #     return DataLoader(
+    #         self.train_set,
+    #         batch_size=self.hparams.batch_size,
+    #         shuffle=True,
+    #         drop_last=True,
+    #         num_workers=self.hparams.num_workers,
+    #     )
 
-    def val_dataloader(self) -> DataLoader:
-        """Create velidation dataloader."""
-        return DataLoader(
-            self.val_set,
-            batch_size=self.hparams.batch_size,
-            shuffle=False,
-            drop_last=False,
-            num_workers=self.hparams.num_workers,
-        )
+    # def val_dataloader(self) -> DataLoader:
+    #     """Create velidation dataloader."""
+    #     return DataLoader(
+    #         self.val_set,
+    #         batch_size=self.hparams.batch_size,
+    #         shuffle=False,
+    #         drop_last=False,
+    #         num_workers=self.hparams.num_workers,
+    #     )

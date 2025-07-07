@@ -270,6 +270,12 @@ def iresnet18(pretrained=False, progress=True, **kwargs):
     )
 
 
+def iresnet18_normalized(pretrained=False, progress=True, **kwargs):
+    return _iresnet_normalized(
+        "iresnet18", IBasicBlock, [2, 2, 2, 2], pretrained, progress, **kwargs
+    )
+
+
 def iresnet34(pretrained=False, progress=True, **kwargs):
     return _iresnet(
         "iresnet34", IBasicBlock, [3, 4, 6, 3], pretrained, progress, **kwargs
