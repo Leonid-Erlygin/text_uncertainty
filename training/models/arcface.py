@@ -209,19 +209,23 @@ class MetricLearningModel(LightningModule):
 
         :param outputs - List validation_step() outputs (List of dicts in our case)
         """
-        # aggreaget predicted features and labels; need to use CPU for matplotlib
-        # outputs = self.validation_step_outputs
-        # features = (
-        #     torch.vstack([batch_out["out"] for batch_out in outputs]).detach().cpu()
-        # )
-        # labels = torch.hstack([batch_out["label"] for batch_out in outputs]).cpu()
+        # aggreaget predicted features and labels
+        outputs = self.validation_step_outputs
+        features = (
+            torch.vstack([batch_out["out"] for batch_out in outputs])
+            .detach()
+            .cpu()
+            .numpy()
+        )
+        labels = (
+            torch.hstack([batch_out["label"] for batch_out in outputs]).cpu().numpy()
+        )
 
         # # get normalized softmax weights for visualization
-        # weights = F.normalize(self.softmax_weights, p=2, dim=1).detach().cpu()
-
-        # dists = []
-        # colors = list(mcolors.TABLEAU_COLORS)[: self.hparams.num_labels]
-        pass
+        weights = F.normalize(self.softmax_weights, p=2, dim=1).detach().cpu().numpy()
+        predictions = np.argmax(features @ weights.T, axis=-1)
+        accuracy = np.mean(predictions == labels)
+        self.log("val_accuracy", accuracy.item())
 
     def configure_optimizers(self) -> Dict[str, torch.optim.Optimizer]:
         """Create optimizer for model training."""

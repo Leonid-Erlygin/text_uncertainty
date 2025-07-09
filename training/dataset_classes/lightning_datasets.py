@@ -11,6 +11,7 @@ import scipy.io.wavfile as sciwav
 from python_speech_features import sigproc
 from torchvision import datasets, transforms
 
+from torchvision.transforms import InterpolationMode
 import mxnet as mx
 import numbers
 from pathlib import Path
@@ -426,8 +427,15 @@ class WhaleDataset(Dataset):
             return augmented, self.ids[i]
 
 
-class CIFAR10(Dataset):
-    def __init__(self, root_dir: str, train, image_size=112):
+class CIFAR_N(Dataset):
+    def __init__(
+        self,
+        root_dir: str,
+        ds_name: str,
+        image_size=112,
+        angle=360,
+        cosine_sim_path=None,
+    ):
         transform = transforms.Compose(
             [
                 transforms.ToTensor(),
@@ -435,16 +443,69 @@ class CIFAR10(Dataset):
                 transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
             ]
         )
-        self.cifar_ds = datasets.CIFAR10(
-            root=root_dir, train=train, download=True, transform=transform
+        self.dataset = getattr(datasets, ds_name)(
+            root=root_dir, train=True, download=True, transform=transform
         )
-        self
+        noise_file = torch.load(
+            f"/app/datasets/cifar-10-100n-main/data/{ds_name}_human.pt"
+        )
+        if ds_name == "CIFAR100":
+            self.noisy_label = noise_file["noisy_label"]
+        else:
+            self.noisy_label = noise_file["worse_label"]
+        if cosine_sim_path is not None:
+            cosine_sim_train = np.load(cosine_sim_path)
+            EPS = 1e-6
+            angles = (
+                np.arccos(np.clip(cosine_sim_train, -1.0 + EPS, 1.0 - EPS)) / (np.pi)
+            ) * 180
+            idx = np.where(angles < angle)[0]
+            self.dataset = torch.utils.data.Subset(
+                self.dataset,
+                idx,
+            )
+            self.noisy_label = self.noisy_label[idx]
 
     def __getitem__(self, index):
-        # image, label =
-        # image = cv2.resize(
-        #     image, tuple(self.cfg.image_size), interpolation=cv2.INTER_CUBIC
-        # )
+        image = self.dataset[index][0]
+        return image, self.noisy_label[index]
+
+    def __len__(self):
+        return len(self.dataset)
+
+
+class CIFAR(Dataset):
+    def __init__(
+        self,
+        root_dir: str,
+        train,
+        ds_name,
+        image_size=112,
+        angle=360,
+        cosine_sim_path=None,
+    ):
+        transform = transforms.Compose(
+            [
+                transforms.ToTensor(),
+                transforms.Resize(size=image_size),
+                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            ]
+        )
+        self.cifar_ds = getattr(datasets, ds_name)(
+            root=root_dir, train=train, download=True, transform=transform
+        )
+        if cosine_sim_path is not None and train:
+            cosine_sim_train = np.load(cosine_sim_path)
+            EPS = 1e-6
+            angles = (
+                np.arccos(np.clip(cosine_sim_train, -1.0 + EPS, 1.0 - EPS)) / (np.pi)
+            ) * 180
+            self.cifar_ds = torch.utils.data.Subset(
+                self.cifar_ds,
+                np.where(angles < angle)[0],
+            )
+
+    def __getitem__(self, index):
         return self.cifar_ds[index]
 
     def __len__(self):
