@@ -5,7 +5,7 @@ trainer:
   logger:
     _target_: pytorch_lightning.loggers.WandbLogger
     project: "CIFAR10N"
-    name: "SCF clean"
+    name: "SCF less papam"
   callbacks:
   - _target_: pytorch_lightning.callbacks.ModelCheckpoint 
     every_n_epochs: 1
@@ -32,7 +32,7 @@ model:
     head:
         _target_: training.models.heads.SCFHead
         convf_dim: 25088
-        latent_vector_size: 4096
+        latent_vector_size: 512 #4096
     scf_loss:
         _target_: training.models.losses.KLDiracVMF
         z_dim: 512
@@ -46,12 +46,12 @@ model:
         optimizer_name: AdamW
         params:
             lr: 3e-2
-            weight_decay: 1e-3
+            weight_decay: 1e-2
     scheduler_params:
         scheduler: OneCycleLR
         params:
             max_lr: 3e-4
-            steps_per_epoch: 74
+            steps_per_epoch: 125
             epochs: 40
             div_factor: 1e1
             final_div_factor: 1e1
@@ -65,8 +65,8 @@ data:
         _target_: training.dataset_classes.lightning_datasets.CIFAR_N
         root_dir: /app/datasets/cifar10
         ds_name: CIFAR10
-        cosine_sim_path: /app/notebooks/data_unc/outputs/train_cifar_10N_cosine_sim.npy
-        angle: 25
+        # cosine_sim_path: /app/notebooks/data_unc/outputs/train_cifar_10N_cosine_sim.npy
+        # angle: 25
 
     validation_dataset:
         _target_: training.dataset_classes.lightning_datasets.CIFAR

@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 import math
 from pytorch_lightning import LightningModule
 from pytorch_lightning.callbacks import BasePredictionWriter, Callback
@@ -27,16 +28,16 @@ class SoftmaxWeights(torch.nn.Module):
         self, softmax_weights_path: str, radius: int, requires_grad=False
     ) -> None:
         super().__init__()
-        self.softmax_weights = torch.load(softmax_weights_path)
+        softmax_weights = torch.load(softmax_weights_path)
         softmax_weights_norm = torch.norm(
-            self.softmax_weights, dim=1, keepdim=True
+            softmax_weights, dim=1, keepdim=True
         )  # [N, 512]
-        self.softmax_weights = (
-            self.softmax_weights / softmax_weights_norm * radius
+        softmax_weights = (
+            softmax_weights / softmax_weights_norm * radius
         )  # $ w_c \in rS^{d-1} $
 
         self.softmax_weights = torch.nn.Parameter(
-            self.softmax_weights, requires_grad=requires_grad
+            softmax_weights, requires_grad=requires_grad
         )
 
 
@@ -155,12 +156,11 @@ class SphereConfidenceFace(LightningModule):
         return self(images_batch)
 
     def validation_step(self, batch, batch_idx):
-        images_batch = batch
+        images, labels = batch
         if self.permute_batch:
-            images_batch = images_batch.permute(0, 3, 1, 2)
-        pred = self(images_batch)
-        self.validation_step_outputs.append(pred)
-        return pred
+            images = images.permute(0, 3, 1, 2)
+        features, log_kappa = self(images)
+        self.validation_step_outputs.append([features, log_kappa, labels])
 
     def on_validation_epoch_end(self):
         image_input_feats = (
@@ -168,78 +168,133 @@ class SphereConfidenceFace(LightningModule):
             .cpu()
             .numpy()
         )
-        unc = (
+        log_kappa = (
             torch.cat([batch[1] for batch in self.validation_step_outputs], axis=0)
             .cpu()
             .numpy()
         )
-        unc = np.exp(unc)
+        labels = (
+            torch.cat([batch[2] for batch in self.validation_step_outputs], axis=0)
+            .cpu()
+            .numpy()
+        )
         self.validation_step_outputs.clear()
+        kappa = np.exp(log_kappa)
 
-        test_dataset = self.validation_dataset
-        pooled_data = self.template_pooling_strategy(
-            image_input_feats,
-            unc,
-            test_dataset.templates,
-            test_dataset.medias,
-        )
-        pooling_default_strategy = PoolingDefault()
-        pooled_default_data = pooling_default_strategy(
-            image_input_feats,
-            unc,
-            test_dataset.templates,
-            test_dataset.medias,
-        )
+        unc_indexes = np.argsort(-kappa[:, 0])
+        fractions = [0, 0.5, 10]
+        fractions_linspace = np.linspace(fractions[0], fractions[1], fractions[2])
+        accuracies = []
+        weights = F.normalize(self.softmax_weights, p=2, dim=1).detach().cpu().numpy()
+        for fraction in fractions_linspace:
+            good_idx = unc_indexes[: int((1 - fraction) * kappa.shape[0])]
+            good_feat = image_input_feats[good_idx]
+            good_labels = labels[good_idx]
+            predictions = np.argmax(good_feat @ weights.T, axis=-1)
+            accuracy = np.mean(predictions == good_labels)
+            accuracies.append(accuracy)
+        unc_auc_pr = np.mean(accuracies) * fractions[-2]
 
-        template_pooled_emb = pooled_data[0]
-        template_pooled_unc = pooled_data[1]
-        template_pooled_default_emb = pooled_default_data[0]
-        template_pooled_default_unc = pooled_default_data[1]
-        template_ids = np.unique(test_dataset.templates)
-        scores, unc = self.recognition_method(
-            template_pooled_emb,
-            template_pooled_unc,
-            template_ids,
-            test_dataset.p1,
-            test_dataset.p2,
-        )
-        scores_default, unc_default = self.recognition_method(
-            template_pooled_default_emb,
-            template_pooled_default_unc,
-            template_ids,
-            test_dataset.p1,
-            test_dataset.p2,
-        )
-        print(scores.shape)
-        metrics = {}
-        for metric in self.verification_metrics:
-            print(metric)
-            metrics.update(
-                metric(
-                    scores=scores,
-                    labels=test_dataset.label,
-                )
-            )
-        print(metrics)
-        unc_metrics = {}
+        # random
+        unc_indexes = np.arange(kappa.shape[0])
+        rng = np.random.default_rng(1)
+        rng.shuffle(unc_indexes)
+        accuracies_random = []
+        for fraction in fractions_linspace:
+            good_idx = unc_indexes[: int((1 - fraction) * kappa.shape[0])]
+            good_feat = image_input_feats[good_idx]
+            good_labels = labels[good_idx]
+            predictions = np.argmax(good_feat @ weights.T, axis=-1)
+            accuracy = np.mean(predictions == good_labels)
+            accuracies_random.append(accuracy)
+        random_auc_pr = np.mean(accuracies_random) * fractions[-2]
 
-        # compute uncertainty metrics
-        for unc_metric in self.verification_uncertainty_metrics:
-            print(unc_metric)
-            unc_metrics.update(
-                unc_metric(
-                    scores=scores_default,
-                    labels=test_dataset.label,
-                    predicted_unc=unc_default[:, 0],
-                )
-            )
-        print(unc_metrics)
-        for metric_name, value in metrics.items():
-            if "TAR" in metric_name:
-                self.log(metric_name, value)
+        # oracle
 
-        for unc_metric_name, unc_value in unc_metrics.items():
-            if "TAR" in unc_metric_name:
-                filter_auc = unc_metrics["fractions"][-1] * np.mean(unc_value)
-                name = unc_metric_name.split(":")[-1]
-                self.log(f"filter_auc_{name}", filter_auc)
+        unc_oracle = np.zeros(kappa.shape[0])
+        predictions = np.argmax(image_input_feats @ weights.T, axis=-1)
+        errors = predictions != labels
+        unc_oracle[errors] = 1
+        unc_indexes = np.argsort(unc_oracle)
+        accuracies_oracle = []
+        for fraction in fractions_linspace:
+            good_idx = unc_indexes[: int((1 - fraction) * kappa.shape[0])]
+            good_feat = image_input_feats[good_idx]
+            good_labels = labels[good_idx]
+            predictions = np.argmax(good_feat @ weights.T, axis=-1)
+            accuracy = np.mean(predictions == good_labels)
+            accuracies_oracle.append(accuracy)
+        oracle_auc_pr = np.mean(accuracies_oracle) * fractions[-2]
+
+        self.log("random auc", random_auc_pr)
+        self.log("oracle auc", oracle_auc_pr)
+        self.log("unc auc", unc_auc_pr)
+
+        self.log("PPR", (unc_auc_pr - random_auc_pr) / (oracle_auc_pr - random_auc_pr))
+        # test_dataset = self.validation_dataset
+        # pooled_data = self.template_pooling_strategy(
+        #     image_input_feats,
+        #     unc,
+        #     test_dataset.templates,
+        #     test_dataset.medias,
+        # )
+        # pooling_default_strategy = PoolingDefault()
+        # pooled_default_data = pooling_default_strategy(
+        #     image_input_feats,
+        #     unc,
+        #     test_dataset.templates,
+        #     test_dataset.medias,
+        # )
+
+        # template_pooled_emb = pooled_data[0]
+        # template_pooled_unc = pooled_data[1]
+        # template_pooled_default_emb = pooled_default_data[0]
+        # template_pooled_default_unc = pooled_default_data[1]
+        # template_ids = np.unique(test_dataset.templates)
+        # scores, unc = self.recognition_method(
+        #     template_pooled_emb,
+        #     template_pooled_unc,
+        #     template_ids,
+        #     test_dataset.p1,
+        #     test_dataset.p2,
+        # )
+        # scores_default, unc_default = self.recognition_method(
+        #     template_pooled_default_emb,
+        #     template_pooled_default_unc,
+        #     template_ids,
+        #     test_dataset.p1,
+        #     test_dataset.p2,
+        # )
+        # print(scores.shape)
+        # metrics = {}
+        # for metric in self.verification_metrics:
+        #     print(metric)
+        #     metrics.update(
+        #         metric(
+        #             scores=scores,
+        #             labels=test_dataset.label,
+        #         )
+        #     )
+        # print(metrics)
+        # unc_metrics = {}
+
+        # # compute uncertainty metrics
+        # for unc_metric in self.verification_uncertainty_metrics:
+        #     print(unc_metric)
+        #     unc_metrics.update(
+        #         unc_metric(
+        #             scores=scores_default,
+        #             labels=test_dataset.label,
+        #             predicted_unc=unc_default[:, 0],
+        #         )
+        #     )
+        # print(unc_metrics)
+        # for metric_name, value in metrics.items():
+        #     if "TAR" in metric_name:
+        #         self.log(metric_name, value)
+
+        # for unc_metric_name, unc_value in unc_metrics.items():
+        #     if "TAR" in unc_metric_name:
+        #         filter_auc = unc_metrics["fractions"][-1] * np.mean(unc_value)
+        #         name = unc_metric_name.split(":")[-1]
+        #         self.log(f"filter_auc_{name}", filter_auc)
