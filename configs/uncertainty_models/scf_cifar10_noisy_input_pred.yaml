@@ -5,7 +5,7 @@ trainer:
   logger:
     _target_: pytorch_lightning.loggers.WandbLogger
     project: "CIFAR10N"
-    name: "SCF less papam"
+    name: "SCF input pred bottle_neck"
   callbacks:
   - _target_: pytorch_lightning.callbacks.ModelCheckpoint 
     every_n_epochs: 1
@@ -29,6 +29,12 @@ model:
         resnet_name: iresnet18_normalized
         weights: /app/model_weights/cifar10N/clean_backbone/resnet18.pt
         learnable: False
+    backbone_input:
+        _target_: training.models.lightning_wrappers.ResNet
+        resnet_name: iresnet18_normalized
+        weights: /app/model_weights/cifar10N/clean_backbone/resnet18.pt
+        learnable: True
+    predict_kappa_by_input: True
     head:
         _target_: training.models.heads.SCFHead
         convf_dim: 512

@@ -1,5 +1,6 @@
 outputs
 cache
+mlruns
 sandbox
 scripts/old_scripts
 configs/uncertainty_benchmark/legacy

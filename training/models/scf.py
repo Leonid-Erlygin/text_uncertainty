@@ -57,6 +57,7 @@ class SphereConfidenceFace(LightningModule):
         verification_metrics=None,
         verification_uncertainty_metrics=None,
         predict_kappa_by_input=False,
+        backbone_input=None,
     ):
         super().__init__()
         self.backbone = backbone
@@ -89,13 +90,16 @@ class SphereConfidenceFace(LightningModule):
         self.verification_metrics = verification_metrics
         self.verification_uncertainty_metrics = verification_uncertainty_metrics
         self.predict_kappa_by_input = predict_kappa_by_input
+        self.backbone_input = backbone_input
 
     def forward(self, x):
         self.backbone.eval()
         backbone_outputs = self.backbone(x)
         if self.predict_kappa_by_input:
-            x = torch.flatten(x, 1)
-            log_kappa = self.head({"bottleneck_feature": x})
+            # x = torch.flatten(x, 1)
+            bottleneck_feature = self.backbone_input(x)["feature"]
+            # bottleneck_feature = self.backbone_input(x)["bottleneck_feature"]
+            log_kappa = self.head({"bottleneck_feature": bottleneck_feature})
         else:
             log_kappa = self.head(backbone_outputs)
         return backbone_outputs["feature"], log_kappa
@@ -123,13 +127,18 @@ class SphereConfidenceFace(LightningModule):
         return total_loss
 
     def configure_optimizers(self):
+        if self.predict_kappa_by_input:
+            params = [*self.head.parameters()] + [*self.backbone_input.parameters()]
+        else:
+            params = [*self.head.parameters()]
         optimizer = getattr(
             importlib.import_module(self.optimizer_params["optimizer_path"]),
             self.optimizer_params["optimizer_name"],
         )(
-            [*self.head.parameters()],
+            params,
             **self.optimizer_params["params"],
         )
+
         return {
             "optimizer": optimizer,
             "lr_scheduler": {
