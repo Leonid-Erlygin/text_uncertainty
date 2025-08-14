@@ -4,8 +4,8 @@ trainer:
   _target_: pytorch_lightning.Trainer
   logger:
     _target_: pytorch_lightning.loggers.mlflow.MLFlowLogger
-    experiment_name: "CIFAR10N"
-    run_name: "SCF trained on cleaned CF10 v2"
+    experiment_name: "CIFAR10N SCF"
+    run_name: "SCF trained on cleaned ds"
   callbacks:
   - _target_: pytorch_lightning.callbacks.ModelCheckpoint 
     every_n_epochs: 1

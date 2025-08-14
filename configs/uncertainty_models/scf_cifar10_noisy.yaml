@@ -3,13 +3,13 @@ mode: train
 trainer:
   _target_: pytorch_lightning.Trainer
   logger:
-    _target_: pytorch_lightning.loggers.WandbLogger
-    project: "CIFAR10N"
-    name: "SCF less papam"
+    _target_: pytorch_lightning.loggers.mlflow.MLFlowLogger
+    experiment_name: "CIFAR10N SCF"
+    run_name: "SCF trained on original ds"
   callbacks:
   - _target_: pytorch_lightning.callbacks.ModelCheckpoint 
     every_n_epochs: 1
-    dirpath: outputs/scf_cifar10/clear_set
+    dirpath: outputs/scf_cifar10/noisy
     save_last: True
   - _target_: pytorch_lightning.callbacks.LearningRateMonitor
     logging_interval: "step"
@@ -18,7 +18,7 @@ trainer:
   devices: 1
   num_sanity_val_steps: 0
   log_every_n_steps: 3
-  default_root_dir: outputs/scf_cifar10/clear_set
+  default_root_dir: outputs/scf_cifar10/noisy
   enable_checkpointing: true
   
 
@@ -65,8 +65,6 @@ data:
         _target_: training.dataset_classes.lightning_datasets.CIFAR_N
         root_dir: /app/datasets/cifar10
         ds_name: CIFAR10
-        # cosine_sim_path: /app/notebooks/data_unc/outputs/train_cifar_10N_cosine_sim.npy
-        # angle: 25
 
     validation_dataset:
         _target_: training.dataset_classes.lightning_datasets.CIFAR
