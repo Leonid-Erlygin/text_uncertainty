@@ -12,6 +12,7 @@ dependencies:
   - conda-forge::termcolor
   - conda-forge::tensorboard
   - conda-forge::black
+  - conda-forge::rclone
   - conda-forge::hydra-core
   - conda-forge::numexpr
   - anaconda::ipython
@@ -66,3 +67,4 @@ dependencies:
     - scikit-learn-intelex
     - "black[jupyter]"
     - geotorch
+    - mlflow

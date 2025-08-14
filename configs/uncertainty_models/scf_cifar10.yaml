@@ -3,9 +3,9 @@ mode: train
 trainer:
   _target_: pytorch_lightning.Trainer
   logger:
-    _target_: pytorch_lightning.loggers.WandbLogger
-    project: "CIFAR10N"
-    name: "SCF clean"
+    _target_: pytorch_lightning.loggers.mlflow.MLFlowLogger
+    experiment_name: "CIFAR10N"
+    run_name: "SCF trained on cleaned CF10 v2"
   callbacks:
   - _target_: pytorch_lightning.callbacks.ModelCheckpoint 
     every_n_epochs: 1

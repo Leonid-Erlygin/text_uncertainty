@@ -1,7 +1,9 @@
 outputs
 cache
+docker_scripts/launch_logger.sh
 mlruns
 sandbox
+configs/mlflow_uri.yaml
 scripts/old_scripts
 configs/uncertainty_benchmark/legacy
 configs/uncertainty_models/old_cfg
