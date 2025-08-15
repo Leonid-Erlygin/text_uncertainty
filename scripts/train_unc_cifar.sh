@@ -12,6 +12,6 @@ docker run \
  --gpus '"device=0"' \
  -w="/app" \
  ${USER}_$(basename $(dirname "$PWD")) \
- python3 training/trainers/train.py -cn=scf_cifar10 #-cn=scf_cifar10
+ python3 training/trainers/train.py -cn=scf_cifar10_noisy #-cn=scf_cifar10
  #-cn=arcface_cifar10_clean # -cn=arcface_cifar10 #-cn=scf_whale # -cn=scaleface_whale #-cn=pfe_whale #-cn=scaleface_vb2 
  # -cn=pfe_vb2 # -cn=scf_vb2 #-cn=scf_ms1m # -cn=scaleface_ms1m # -cn=pfe_ms1m 

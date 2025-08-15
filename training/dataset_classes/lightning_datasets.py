@@ -432,17 +432,15 @@ class CIFAR_N(Dataset):
         self,
         root_dir: str,
         ds_name: str,
-        image_size=112,
+        image_size=32,
         angle=360,
         cosine_sim_path=None,
     ):
-        transform = transforms.Compose(
-            [
-                transforms.ToTensor(),
-                transforms.Resize(size=image_size),
-                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-            ]
-        )
+        transformations = [transforms.ToTensor()]
+        if image_size != 32:
+            transformations += [transforms.Resize(size=image_size)]
+        transformations += [transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
+        transform = transforms.Compose(transformations)
         self.dataset = getattr(datasets, ds_name)(
             root=root_dir, train=True, download=True, transform=transform
         )
@@ -480,17 +478,15 @@ class CIFAR(Dataset):
         root_dir: str,
         train,
         ds_name,
-        image_size=112,
+        image_size=32,
         angle=360,
         cosine_sim_path=None,
     ):
-        transform = transforms.Compose(
-            [
-                transforms.ToTensor(),
-                transforms.Resize(size=image_size),
-                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-            ]
-        )
+        transformations = [transforms.ToTensor()]
+        if image_size != 32:
+            transformations += [transforms.Resize(size=image_size)]
+        transformations += [transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
+        transform = transforms.Compose(transformations)
         self.cifar_ds = getattr(datasets, ds_name)(
             root=root_dir, train=train, download=True, transform=transform
         )

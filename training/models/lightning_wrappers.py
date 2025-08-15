@@ -33,11 +33,9 @@ class EfficientNet(torch.nn.Module):
 
 
 class ResNet(torch.nn.Module):
-    def __init__(
-        self, resnet_name: str, weights, learnable: bool, use_cpu=False
-    ) -> None:
+    def __init__(self, resnet_name: str, weights, use_cpu=False, **kwargs) -> None:
         super().__init__()
-        self.backbone = mlib.model_dict[resnet_name](learnable=learnable)
+        self.backbone = mlib.model_dict[resnet_name](**kwargs)
 
         if weights is not False:
             if use_cpu:

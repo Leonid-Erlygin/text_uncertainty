@@ -85,7 +85,7 @@ class IBasicBlock(nn.Module):
 
 
 class IResNet(nn.Module):
-    fc_scale = 7 * 7
+    # fc_scale = 7 * 7
 
     def __init__(
         self,
@@ -99,6 +99,7 @@ class IResNet(nn.Module):
         replace_stride_with_dilation=None,
         fp16=False,
         learnable=True,
+        fc_scale=7 * 7,
     ):
         super(IResNet, self).__init__()
         self.fp16 = fp16
@@ -133,7 +134,7 @@ class IResNet(nn.Module):
             eps=1e-05,
         )
         self.dropout = nn.Dropout(p=dropout, inplace=True)
-        self.fc = nn.Linear(512 * block.expansion * self.fc_scale, num_features)
+        self.fc = nn.Linear(512 * block.expansion * fc_scale, num_features)
         self.features = nn.BatchNorm1d(num_features, eps=1e-05)
         nn.init.constant_(self.features.weight, 1.0)
         self.features.weight.requires_grad = False
