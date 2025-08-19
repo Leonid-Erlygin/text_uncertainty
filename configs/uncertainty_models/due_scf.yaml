@@ -37,12 +37,12 @@ model:
         latent_vector_size: 4096
     scf_loss:
         _target_: training.models.losses.KLDiracVMF
-        z_dim: 512
-        radius: 64
+        z_dim: 64
+        radius: 8
     softmax_weights:
         _target_: training.models.scf.SoftmaxWeights
         softmax_weights_path: "/app/model_weights/cifar10N/clean_backbone/softmax_weights.pt"
-        radius: 64
+        radius: 8
     optimizer_params:
         optimizer_path: torch.optim
         optimizer_name: AdamW

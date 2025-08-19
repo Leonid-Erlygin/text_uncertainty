@@ -435,17 +435,20 @@ class CIFAR_N(Dataset):
         image_size=32,
         angle=360,
         cosine_sim_path=None,
+        use_augments=False,
     ):
-        transformations = [
-            transforms.RandomCrop(32, padding=4),
-            transforms.RandomHorizontalFlip(),
-        ]
+        if use_augments:
+            transformations = [
+                transforms.RandomCrop(32, padding=4),
+                transforms.RandomHorizontalFlip(),
+            ]
+        else:
+            transformations = []
+        print(transformations)
         transformations += [transforms.ToTensor()]
         if image_size != 32:
             transformations += [transforms.Resize(size=image_size)]
-        transformations += [
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
-        ]
+        transformations += [transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
         transform = transforms.Compose(transformations)
         self.dataset = getattr(datasets, ds_name)(
             root=root_dir, train=True, download=True, transform=transform

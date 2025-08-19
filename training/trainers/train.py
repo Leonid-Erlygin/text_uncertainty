@@ -22,6 +22,8 @@ def train_model(cfg):
     dataclass = instantiate(cfg.data)
 
     if cfg.mode == "train":
+        for logger in trainer.loggers:
+            logger.log_hyperparams(OmegaConf.to_container(cfg))
         trainer.fit(model=model, datamodule=dataclass)
     elif cfg.mode == "predict":
         trainer.predict(model=model, datamodule=dataclass)

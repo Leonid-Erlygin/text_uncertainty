@@ -9,7 +9,7 @@ docker run \
  --rm \
  --init \
  -v $(dirname "$PWD"):/app \
- --gpus '"device=0"' \
+ --gpus '"device=5"' \
  -w="/app" \
  ${USER}_$(basename $(dirname "$PWD")) \
- python3 training/trainers/train.py -cn=arcface_cifar10N_32x32_clean #-cn=arcface_cifar10N_32x32 #
+ python3 training/trainers/train.py -cn=scf_cifar10_noisy #-cn=scf_cifar10_clean #-cn=scf_cifar10_noisy #-cn=arcface_cifar10N_32x32_clean #-cn=arcface_cifar10N_32x32 #
