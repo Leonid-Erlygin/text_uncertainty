@@ -1,44 +1,11 @@
 import torch
 import torch.nn.functional as F
 from pytorch_lightning import LightningModule
-from pytorch_lightning.callbacks import BasePredictionWriter
 import importlib
-from pathlib import Path
 import numpy as np
 
 
-class Prediction_writer(BasePredictionWriter):
-    def __init__(self, output_dir: str, file_name: str, write_interval: str):
-        super().__init__(write_interval)
-        self.output_dir = Path(output_dir)
-        self.file_name = file_name
-
-    def write_on_epoch_end(self, trainer, pl_module, predictions, batch_indices):
-        embs = torch.cat([batch[0] for batch in predictions], axis=0).numpy()
-        unc = torch.cat([batch[1] for batch in predictions], axis=0).numpy()
-        print(embs.shape, unc.shape)
-        np.savez(self.output_dir / f"{self.file_name}.npz", embs=embs, unc=unc)
-
-
-class SoftmaxWeights(torch.nn.Module):
-    def __init__(
-        self, softmax_weights_path: str, radius: int, requires_grad=False
-    ) -> None:
-        super().__init__()
-        softmax_weights = torch.load(softmax_weights_path)
-        softmax_weights_norm = torch.norm(
-            softmax_weights, dim=1, keepdim=True
-        )  # [N, 512]
-        softmax_weights = (
-            softmax_weights / softmax_weights_norm * radius
-        )  # $ w_c \in rS^{d-1} $
-
-        self.softmax_weights = torch.nn.Parameter(
-            softmax_weights, requires_grad=requires_grad
-        )
-
-
-class SphereConfidenceFace(LightningModule):
+class DUESphereConfidenceFace(LightningModule):
     def __init__(
         self,
         backbone: torch.nn.Module,

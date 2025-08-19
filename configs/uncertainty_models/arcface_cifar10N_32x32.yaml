@@ -39,22 +39,18 @@ model:
     scheduler_params:
         scheduler: OneCycleLR
         params:
-            max_lr: 1e-3
+            max_lr: 1e-2
             steps_per_epoch: 125
             epochs: 40
             div_factor: 1e1
-            final_div_factor: 1e2
+            final_div_factor: 1e1
         interval: step
-    weight_decay: 1e-1
+    weight_decay: 1e-3
 
 
 data:
     _target_: training.dataset_classes.lightning_datasets.UncertaintyDataModule
     train_dataset:
-        # _target_: training.dataset_classes.lightning_datasets.CIFAR
-        # root_dir: /app/datasets/cifar10
-        # train: True
-        # ds_name: CIFAR10
         _target_: training.dataset_classes.lightning_datasets.CIFAR_N
         root_dir: /app/datasets/cifar10
         ds_name: CIFAR10
