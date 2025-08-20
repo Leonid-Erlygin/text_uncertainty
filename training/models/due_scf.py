@@ -3,95 +3,77 @@ import torch.nn.functional as F
 from pytorch_lightning import LightningModule
 import importlib
 import numpy as np
+from torch.utils.data import Dataset
+from training.models.due import dkl
+from gpytorch.mlls import VariationalELBO
+from gpytorch.likelihoods import SoftmaxLikelihood
+from gpytorch.likelihoods import GaussianLikelihood
 
 
 class DUESphereConfidenceFace(LightningModule):
     def __init__(
         self,
-        backbone: torch.nn.Module,
-        head: torch.nn.Module,
-        scf_loss: torch.nn.Module,
+        target_feature_vector_model: torch.nn.Module,
+        softmax_weights: torch.nn.Module,
+        feature_extractor: torch.nn.Module,
+        train_dataset: Dataset,
+        n_inducing_points: int,
+        kernel: str,
         optimizer_params,
         scheduler_params,
-        permute_batch: bool,
-        softmax_weights: torch.nn.Module = None,
-        validation_dataset=None,
-        template_pooling_strategy=None,
-        recognition_method=None,
-        verification_metrics=None,
-        verification_uncertainty_metrics=None,
-        predict_kappa_by_input=False,
-        backbone_input=None,
+        permute_batch=False,
     ):
         super().__init__()
-        self.backbone = backbone
-        self.backbone.eval()
-        self.head = head
-        self.scf_loss = scf_loss
-        # bad style code:
-        if softmax_weights is None:
-            # assume that weights are stored in the backbone as in case of whale dataset
-            self.softmax_weights = self.backbone.backbone.head_id.weight.data
-            delattr(self.backbone.backbone, "head_id")
-            softmax_weights_norm = torch.norm(self.softmax_weights, dim=1, keepdim=True)
-            self.softmax_weights = (
-                self.softmax_weights / softmax_weights_norm * scf_loss.radius
-            )
-            self.softmax_weights = torch.nn.Parameter(
-                self.softmax_weights, requires_grad=False
-            )
-        else:
-            self.softmax_weights = softmax_weights.softmax_weights
+        self.target_feature_vector_model = target_feature_vector_model
+        self.target_feature_vector_model.eval()
         self.softmax_weights = softmax_weights.softmax_weights
-
         self.optimizer_params = optimizer_params
         self.scheduler_params = scheduler_params
         self.permute_batch = permute_batch
         self.validation_step_outputs = []
-        self.validation_dataset = validation_dataset
-        self.template_pooling_strategy = template_pooling_strategy
-        self.recognition_method = recognition_method
-        self.verification_metrics = verification_metrics
-        self.verification_uncertainty_metrics = verification_uncertainty_metrics
-        self.predict_kappa_by_input = predict_kappa_by_input
-        self.backbone_input = backbone_input
+
+        initial_inducing_points, initial_lengthscale = dkl.initial_values(
+            train_dataset, feature_extractor, n_inducing_points
+        )
+
+        gp = dkl.GP(
+            num_outputs=1,
+            initial_lengthscale=initial_lengthscale,
+            initial_inducing_points=initial_inducing_points,
+            kernel=kernel,
+        )
+
+        self.model = dkl.DKL(feature_extractor, gp)
+        self.likelihood = GaussianLikelihood()
+        elbo_fn = VariationalELBO(
+            self.likelihood, self.model.gp, num_data=len(train_dataset)
+        )
+        self.loss_fn = lambda x, y: -elbo_fn(x, y)
 
     def forward(self, x):
-        self.backbone.eval()
-        backbone_outputs = self.backbone(x)
-        if self.predict_kappa_by_input:
-            # x = torch.flatten(x, 1)
-            bottleneck_feature = self.backbone_input(x)["feature"]
-            log_kappa = self.head({"bottleneck_feature": bottleneck_feature})
-        else:
-            log_kappa = self.head(backbone_outputs)
-        return backbone_outputs["feature"], log_kappa
+        cosine_sim = self.model(x)
+        backbone_outputs = self.target_feature_vector_model(x)
+        return backbone_outputs["feature"], cosine_sim
 
     def training_step(self, batch):
         images, labels = batch
-        # freezing bn layers
-        feature, log_kappa = self(images)
-        kappa = torch.exp(log_kappa)
+        feature, cosine_sim_pred = self(images)
         wc = self.softmax_weights[labels, :]
-        losses, l1, l2, l3, cos = self.scf_loss(feature, kappa, wc)
+        cosine_sim_true = torch.sum(feature * wc, dim=1, keepdim=True)
 
-        kappa_mean = kappa.mean()
+        losses = self.loss_fn(cosine_sim_pred, cosine_sim_true)
+
         total_loss = losses.mean()
 
         self.log("train_loss", total_loss.item(), prog_bar=True)
-        self.log("kappa", kappa_mean.item())
-        self.log("l1", l1.mean().item())
-        self.log("l2", l2.mean().item())
-        self.log("l3", l3.mean().item())
-        self.log("cos", cos.mean().item())
+        self.log("cos pred", cosine_sim_pred.mean.mean().item())
+        self.log("cos true", cosine_sim_true.mean().item())
 
         return total_loss
 
     def configure_optimizers(self):
-        if self.predict_kappa_by_input:
-            params = [*self.head.parameters()] + [*self.backbone_input.parameters()]
-        else:
-            params = [*self.head.parameters()]
+
+        params = [*self.model.parameters(), *self.likelihood.parameters()]
         optimizer = getattr(
             importlib.import_module(self.optimizer_params["optimizer_path"]),
             self.optimizer_params["optimizer_name"],
@@ -129,10 +111,11 @@ class DUESphereConfidenceFace(LightningModule):
         images, labels = batch
         if self.permute_batch:
             images = images.permute(0, 3, 1, 2)
-        features, log_kappa = self(images)
-        self.validation_step_outputs.append([features, log_kappa, labels])
+        features, cosine_sim_pred = self(images)
+        self.validation_step_outputs.append([features, cosine_sim_pred.mean, labels])
 
     def on_validation_epoch_end(self):
+        # here we use cosine sim as confidence measure
         image_input_feats = (
             torch.cat([batch[0] for batch in self.validation_step_outputs], axis=0)
             .cpu()
@@ -151,7 +134,7 @@ class DUESphereConfidenceFace(LightningModule):
         self.validation_step_outputs.clear()
         kappa = np.exp(log_kappa)
 
-        unc_indexes = np.argsort(-kappa[:, 0])
+        unc_indexes = np.argsort(-kappa)
         fractions = [0, 0.5, 10]
         fractions_linspace = np.linspace(fractions[0], fractions[1], fractions[2])
         accuracies = []
