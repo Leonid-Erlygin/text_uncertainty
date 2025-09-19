@@ -51,6 +51,7 @@ class DUESphereConfidenceFace(LightningModule):
         self.loss_fn = lambda x, y: -elbo_fn(x, y)
 
     def forward(self, x):
+        self.target_feature_vector_model.eval()
         cosine_sim = self.model(x)
         backbone_outputs = self.target_feature_vector_model(x)
         return backbone_outputs["feature"], cosine_sim
@@ -59,15 +60,19 @@ class DUESphereConfidenceFace(LightningModule):
         images, labels = batch
         feature, cosine_sim_pred = self(images)
         wc = self.softmax_weights[labels, :]
+        target_shift = 0.6
+        target_scale = 0.1
         cosine_sim_true = torch.sum(feature * wc, dim=1, keepdim=True)
-
-        losses = self.loss_fn(cosine_sim_pred, cosine_sim_true)
+        cosine_sim_true_scaled = (
+            torch.exp((cosine_sim_true - target_shift) / target_scale) - 30
+        )
+        losses = self.loss_fn(cosine_sim_pred, cosine_sim_true_scaled)
 
         total_loss = losses.mean()
 
         self.log("train_loss", total_loss.item(), prog_bar=True)
         self.log("cos pred", cosine_sim_pred.mean.mean().item())
-        self.log("cos true", cosine_sim_true.mean().item())
+        self.log("cos true", cosine_sim_true_scaled.mean().item())
 
         return total_loss
 

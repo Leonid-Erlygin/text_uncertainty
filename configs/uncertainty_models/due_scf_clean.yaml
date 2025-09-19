@@ -5,11 +5,11 @@ trainer:
   logger:
     _target_: pytorch_lightning.loggers.mlflow.MLFlowLogger
     experiment_name: "DUE SCF"
-    run_name: "DUE SCF original ds"
+    run_name: "DUE SCF clean ds"
   callbacks:
   - _target_: pytorch_lightning.callbacks.ModelCheckpoint 
     every_n_epochs: 1
-    dirpath: outputs/due_scf_cifar10/noisy
+    dirpath: outputs/due_scf_cifar10/clean
     save_last: True
   - _target_: pytorch_lightning.callbacks.LearningRateMonitor
     logging_interval: "step"
@@ -18,7 +18,7 @@ trainer:
   devices: 1
   num_sanity_val_steps: 0
   log_every_n_steps: 3
-  default_root_dir: outputs/due_scf_cifar10/noisy
+  default_root_dir: outputs/due_scf_cifar10/clean
   enable_checkpointing: true
   
 
@@ -40,13 +40,13 @@ model:
         input_size: 32
         spectral_conv: True
         spectral_bn: True
-        depth: 52
-        dropout_rate: 0.1
     train_dataset:
         _target_: training.dataset_classes.lightning_datasets.CIFAR_N
         root_dir: /app/datasets/cifar10
         ds_name: CIFAR10
-    n_inducing_points: 30
+        cosine_sim_path: /app/model_weights/cifar10N/train_cifar_10N_cosine_sim.npy
+        angle: 25
+    n_inducing_points: 10
     kernel: RBF
 
     optimizer_params:
@@ -54,12 +54,12 @@ model:
         optimizer_name: AdamW
         params:
             lr: 3e-2
-            weight_decay: 5e-4
+            weight_decay: 1e-3
     scheduler_params:
         scheduler: OneCycleLR
         params:
             max_lr: 1e-2
-            steps_per_epoch: 125
+            steps_per_epoch: 75
             epochs: 40
             div_factor: 1e1
             final_div_factor: 1e1
@@ -73,7 +73,8 @@ data:
         _target_: training.dataset_classes.lightning_datasets.CIFAR_N
         root_dir: /app/datasets/cifar10
         ds_name: CIFAR10
-
+        cosine_sim_path: /app/model_weights/cifar10N/train_cifar_10N_cosine_sim.npy
+        angle: 25
     validation_dataset:
         _target_: training.dataset_classes.lightning_datasets.CIFAR
         root_dir: /app/datasets/cifar10
