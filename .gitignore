@@ -7,6 +7,7 @@ configs/mlflow_uri.yaml
 scripts/old_scripts
 configs/uncertainty_benchmark/legacy
 configs/uncertainty_models/old_cfg
+notebooks/test.pdf
 multirun
 .hydra
 .vscode
