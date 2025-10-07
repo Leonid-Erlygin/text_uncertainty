@@ -77,8 +77,8 @@ def create_table_body(result_latex_code, cfg):
         all_metric_values = pd.read_csv(table_path)
         all_metric_values = all_metric_values.drop(
             all_metric_values[
-                (all_metric_values["models"] == "Random")
-                | (all_metric_values["models"] == "Oracle")
+                (all_metric_values["models"].str.contains("Random"))
+                | (all_metric_values["models"].str.contains("Oracle"))
             ].index
         )
         dataset_to_metrics[dataset] = all_metric_values[used_columns]
@@ -97,7 +97,10 @@ def create_table_body(result_latex_code, cfg):
     for row_index, (_, row) in enumerate(table.iterrows()):
         for column_index, column_name in enumerate(table.columns):
             if column_name == "models":
-                result_latex_code += cfg.pretty_name.model[row[column_name]] + " & "
+                if "beta" in row[column_name]:
+                    result_latex_code += row[column_name].split("-")[-1] + " & "
+                else:
+                    result_latex_code += cfg.pretty_name.model[row[column_name]] + " & "
             elif column_name != "models":
                 # metric value
                 metric_value = row.iloc[column_index]

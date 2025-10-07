@@ -155,8 +155,10 @@ def main(cfg):
         # set far value
         recognition_method.far = far
         recognition_method.beta = beta
-
         pretty_name = method.pretty_name
+        if len(cfg.beta_list) > 1:
+            pretty_name += f"_beta-{beta}"
+        # pretty_name = method.pretty_name
         # create unique method name
         if cfg.create_pool_plot is False:
             method_name = (
