@@ -1,5 +1,6 @@
 outputs
 cache
+=4.2.0
 docker_scripts/launch_logger.sh
 mlruns
 sandbox
