@@ -271,6 +271,7 @@ class UncertaintyDataModule(pl.LightningDataModule):
         validation_dataset: Dataset = None,
         predict_dataset: Dataset = None,
         train_batch_sampler: Sampler = None,
+        sampler=None,
     ):
         super().__init__()
         self.train_dataset = train_dataset
@@ -279,6 +280,7 @@ class UncertaintyDataModule(pl.LightningDataModule):
         self.train_batch_sampler = train_batch_sampler
         self.batch_size = batch_size
         self.num_workers = num_workers
+        self.sampler = sampler
 
     def prepare_data(self):
         pass
@@ -305,6 +307,20 @@ class UncertaintyDataModule(pl.LightningDataModule):
                 batch_sampler=self.train_batch_sampler,
                 num_workers=self.num_workers,
             )
+        elif self.sampler is not None:
+            weights = np.load(self.sampler["weights_path"])
+            sampler = getattr(
+                importlib.import_module("torch.utils.data.sampler"),
+                self.sampler["sampler_class"],
+            )(weights, len(weights))
+            return DataLoader(
+                self.train_dataset,
+                sampler=sampler,
+                batch_size=self.batch_size,
+                num_workers=self.num_workers,
+                pin_memory=True,
+                drop_last=True,
+            )
         else:
             return DataLoader(
                 self.train_dataset,
@@ -314,23 +330,23 @@ class UncertaintyDataModule(pl.LightningDataModule):
                 num_workers=self.num_workers,
             )
 
-    def val_dataloader(self):
-        return DataLoader(
-            self.validation_dataset,
-            batch_size=self.batch_size,
-            drop_last=False,
-            shuffle=False,
-            num_workers=self.num_workers,
-        )
+    # def val_dataloader(self):
+    #     return DataLoader(
+    #         self.validation_dataset,
+    #         batch_size=self.batch_size,
+    #         drop_last=False,
+    #         shuffle=False,
+    #         num_workers=self.num_workers,
+    #     )
 
-    def predict_dataloader(self):
-        return DataLoader(
-            self.predict_dataset,
-            batch_size=self.batch_size,
-            drop_last=False,
-            shuffle=False,
-            num_workers=self.num_workers,
-        )
+    # def predict_dataloader(self):
+    #     return DataLoader(
+    #         self.predict_dataset,
+    #         batch_size=self.batch_size,
+    #         drop_last=False,
+    #         shuffle=False,
+    #         num_workers=self.num_workers,
+    #     )
 
 
 class WhaleDataset(Dataset):
