@@ -33,12 +33,12 @@ def prepare_calibration_dataset(calibration_set, embs_name):
     probe_pooled_templates_calib = {gallery_name: {} for gallery_name in used_galleries}
     template_subsets_path = (
         "/app/cache/template_cache_new"
-        / Path("scf")
+        / Path(f"{embs_name}")
         / f"name_calib_template_subsets_PoolingDefault_{calibration_set.dataset_name}"
     )
     template_pool_path = (
         "/app/cache/template_cache_new"
-        / Path("scf")
+        / Path(f"{embs_name}")
         / f"name_template_pool_gallery-PoolingDefault_probe-PoolingDefault_{calibration_set.dataset_name}"
     )
     template_subsets_path.mkdir(parents=True, exist_ok=True)

@@ -126,6 +126,7 @@ class NNcalibration:
         normalize_kl_by_test=False,
         random_subset_size=None,
         log_dir=None,
+        weight_loss_types=False,
     ):
         self.device = torch.device("cuda")
         num_layers = num_layers
@@ -162,6 +163,7 @@ class NNcalibration:
         self.log_dir = log_dir
         self.normalize_kl_by_test = normalize_kl_by_test
         self.train_weight = train_weight
+        self.weight_loss_types = weight_loss_types
 
     def train_calibration_parameters(self, kl_1, kl_2, error_calc, dataset_name, far):
         self.val_ds_name = dataset_name
@@ -173,6 +175,28 @@ class NNcalibration:
         true_pred_label = np.zeros(error_calc.is_seen.shape[0])
         true_pred_label[error_calc.is_seen] = error_calc.true_accept_true_ident
         true_pred_label[~error_calc.is_seen] = error_calc.true_reject
+
+        true_index_weight = 1
+        if self.weight_loss_types:
+            false_reject_or_ident = (
+                error_calc.true_accept_false_ident
+                + error_calc.false_reject_false_ident
+                + error_calc.false_reject_true_ident
+            )
+            false_accept_count = np.sum(error_calc.false_accept)
+            false_reject_or_ident_count = np.sum(false_reject_or_ident) + 500  # reg
+            false_accept_weight = (
+                false_accept_count + false_reject_or_ident_count
+            ) / false_accept_count
+            false_reject_or_ident_weight = (
+                false_accept_count + false_reject_or_ident_count
+            ) / false_reject_or_ident_count
+            # false_accept_weight *= 1 - true_index_weight
+            # false_reject_or_ident_weight *= 1 - true_index_weight
+        else:
+            false_accept_weight = 0.5
+            false_reject_or_ident_weight = 0.5
+
         # save validation normalization parameters
         self.X_mean_val = torch.mean(X, dim=0)
         self.X_std_val = torch.std(X, dim=0)
@@ -251,17 +275,31 @@ class NNcalibration:
             else:
                 pred = self.perceptron(X_norm)
                 loss_element_wise = loss_fn(pred, y)
-                loss = loss_element_wise[true_index].mean() * (
-                    1 - torch.sigmoid(weight)
-                ) + loss_element_wise[~true_index].mean() * torch.sigmoid(weight)
+                loss_false_accept = (
+                    loss_element_wise[~error_calc.is_seen][
+                        error_calc.false_accept
+                    ].mean()
+                    * false_accept_weight
+                )
+                loss_false_reject_or_ident = (
+                    loss_element_wise[error_calc.is_seen][false_reject_or_ident].mean()
+                    * false_reject_or_ident_weight
+                )
+                loss_true_ident = (
+                    loss_element_wise[true_index].mean() * true_index_weight
+                )
+                loss = loss_false_accept + loss_false_reject_or_ident + loss_true_ident
+                # loss = loss_element_wise[true_index].mean() * (
+                #     1 - torch.sigmoid(weight)
+                # ) + loss_element_wise[~true_index].mean() * torch.sigmoid(weight)
                 # loss = (loss_fn(pred, y)* weights).mean()
 
             loss.backward()
             optimizer.step()
             scheduler.step()
-            # print(
-            #     f"Iteration {iter}, Loss: {loss.item()}, lr: {optimizer.param_groups[0]['lr']}"
-            # )
+            print(
+                f"Iteration {iter}, Loss: {loss.item()}, lr: {optimizer.param_groups[0]['lr']}"
+            )
 
             self.perceptron.eval()
             pred_eval = self.perceptron(X_norm)
