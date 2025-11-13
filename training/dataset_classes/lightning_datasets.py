@@ -36,6 +36,7 @@ class MXFaceDataset(Dataset):
         torch_augments=None,
         album_probability=0.0,
         torch_probability=0.0,
+        is_glint360k=False,
     ):
         """
         ArcFace loader
@@ -108,11 +109,11 @@ class MXFaceDataset(Dataset):
         else:
             print("Listing labels...")
             labels = []
-            for i in range(len(self.imgidx)):
+            for i in tqdm(range(len(self.imgidx))):
                 idx = self.imgidx[i]
                 s = self.imgrec.read_idx(idx)
                 header, img = mx.recordio.unpack(s)
-                label = header.label
+                label = header.label[0]
                 labels.append(int(label))
             self.labels = np.array(labels)
             # save labels

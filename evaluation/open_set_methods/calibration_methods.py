@@ -176,13 +176,14 @@ class NNcalibration:
         true_pred_label[error_calc.is_seen] = error_calc.true_accept_true_ident
         true_pred_label[~error_calc.is_seen] = error_calc.true_reject
 
+        false_reject_or_ident = (
+            error_calc.true_accept_false_ident
+            + error_calc.false_reject_false_ident
+            + error_calc.false_reject_true_ident
+        )
         true_index_weight = 1
         if self.weight_loss_types:
-            false_reject_or_ident = (
-                error_calc.true_accept_false_ident
-                + error_calc.false_reject_false_ident
-                + error_calc.false_reject_true_ident
-            )
+
             false_accept_count = np.sum(error_calc.false_accept)
             false_reject_or_ident_count = np.sum(false_reject_or_ident) + 500  # reg
             false_accept_weight = (
@@ -194,8 +195,8 @@ class NNcalibration:
             # false_accept_weight *= 1 - true_index_weight
             # false_reject_or_ident_weight *= 1 - true_index_weight
         else:
-            false_accept_weight = 0.5
-            false_reject_or_ident_weight = 0.5
+            false_accept_weight = 1
+            false_reject_or_ident_weight = 1
 
         # save validation normalization parameters
         self.X_mean_val = torch.mean(X, dim=0)
@@ -272,6 +273,12 @@ class NNcalibration:
                 weights[y_subset == 0.0] = weight
                 pred = self.perceptron(X_norm_subset)
                 loss = (loss_fn(pred, y_subset) * weights).mean()
+            elif self.weight_loss_types is False:
+                pred = self.perceptron(X_norm)
+                loss_element_wise = loss_fn(pred, y)
+                loss = loss_element_wise[true_index].mean() * (
+                    1 - torch.sigmoid(weight)
+                ) + loss_element_wise[~true_index].mean() * torch.sigmoid(weight)
             else:
                 pred = self.perceptron(X_norm)
                 loss_element_wise = loss_fn(pred, y)
@@ -297,9 +304,9 @@ class NNcalibration:
             loss.backward()
             optimizer.step()
             scheduler.step()
-            print(
-                f"Iteration {iter}, Loss: {loss.item()}, lr: {optimizer.param_groups[0]['lr']}"
-            )
+            # print(
+            #     f"Iteration {iter}, Loss: {loss.item()}, lr: {optimizer.param_groups[0]['lr']}"
+            # )
 
             self.perceptron.eval()
             pred_eval = self.perceptron(X_norm)
