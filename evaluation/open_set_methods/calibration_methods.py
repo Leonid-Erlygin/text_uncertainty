@@ -10,6 +10,39 @@ from pathlib import Path
 from sklearn.ensemble import GradientBoostingClassifier
 
 
+def print_specific_params_table_terminal(model, iteration):
+    """
+    Accesses specific parameters from ExpTransform and prints them in a pandas
+    DataFrame table to the terminal.
+    """
+    param_data = []
+
+    # Base parameters that always exist
+    params_to_track = ["T1", "T2"]
+
+    # Conditionally add parameters based on model flags
+    if model.use_alpha:
+        params_to_track.extend(["alpha1", "alpha2"])
+
+    if model.use_shift:
+        params_to_track.extend(["shift1", "shift2"])
+
+    # Iterate through the list of names and retrieve their values
+    for name in params_to_track:
+        # Use getattr() for safe access in case a name somehow ends up in the list incorrectly
+        if hasattr(model, name):
+            value = getattr(model, name).item()
+            param_data.append({"Name": name, "Value": round(value, 4)})
+
+    # Create and print the DataFrame
+    df = pd.DataFrame(param_data)
+
+    print(f"\n--- Parameter Table at Iteration {iteration} ---")
+    # Using to_string to ensure clean terminal output without index column
+    print(df.to_string(index=False))
+    print("-" * (len(df.to_string().split("\n")[0]) + 20) + "\n")
+
+
 class BoostingCalibration:
     def __init__(self, log_dir):
         self.log_dir = log_dir
@@ -111,24 +144,51 @@ class IDResBlock(nn.Module):
         return out
 
 
-class NNcalibration:
-    def __init__(
-        self,
-        hidden_size,
-        num_layers,
-        use_bn,
-        lr,
-        epochs,
-        weight,
-        weight_decay,
-        scheduler_params,
-        train_weight=True,
-        normalize_kl_by_test=False,
-        random_subset_size=None,
-        log_dir=None,
-        weight_loss_types=False,
-    ):
-        self.device = torch.device("cuda")
+class ExpTransform(nn.Module):
+    def __init__(self, use_shift=False, use_alpha=False):
+        super().__init__()
+        self.use_shift = use_shift
+        self.use_alpha = use_alpha
+        self.T1 = nn.Parameter(torch.tensor(1.0))
+        self.T2 = nn.Parameter(torch.tensor(1.0))
+        if self.use_alpha:
+            self.alpha1 = nn.Parameter(torch.tensor(1.0))
+            self.alpha2 = nn.Parameter(torch.tensor(1.0))
+        if self.use_shift:
+            self.shift1 = nn.Parameter(torch.tensor(0.0))
+            self.shift2 = nn.Parameter(torch.tensor(0.0))
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        kl1 = x[:, 0]
+        kl2 = x[:, 1]
+        if self.use_shift:
+            kl1 = kl1 - self.shift1
+            kl2 = kl2 - self.shift2
+
+        # if self.use_alpha:
+        #     return self.sigmoid(self.alpha1) * torch.exp(kl1 / self.T1) + (1 - self.sigmoid(self.alpha1)) * torch.exp(kl2 / self.T2)
+        # else:
+        #     return torch.exp(kl1 / self.T1) + torch.exp(kl2 / self.T2)
+        if self.use_alpha:
+            return self.sigmoid(
+                self.alpha1 * torch.exp(kl1 / self.T1)
+                + self.alpha2 * torch.exp(kl2 / self.T2)
+            )
+        else:
+            return self.sigmoid(torch.exp(kl1 / self.T1) + torch.exp(kl2 / self.T2))
+        # if self.use_shift:
+        #     kl1 = kl1 - self.shift1
+        #     kl2 = kl2 - self.shift2
+        # return self.sigmoid(
+        #     self.alpha1 * torch.exp(kl1 / self.T1)
+        #     + self.alpha2 * torch.exp(kl2 / self.T2)
+        # )
+
+
+class MLP(nn.Module):
+    def __init__(self, hidden_size, num_layers, use_bn):
+        super().__init__()
         num_layers = num_layers
         base_dim = hidden_size
         layers = []
@@ -153,7 +213,30 @@ class NNcalibration:
             ]
         )
         self.perceptron = nn.Sequential(*layers)
-        self.perceptron.to(self.device)
+
+    def forward(self, x):
+        return self.perceptron(x)
+
+
+class NNcalibration:
+    def __init__(
+        self,
+        model,
+        lr,
+        epochs,
+        weight,
+        weight_decay,
+        scheduler_params,
+        train_weight=True,
+        normalize_kl_by_test=False,
+        random_subset_size=None,
+        log_dir=None,
+        weight_loss_types=False,
+        loss_type="CE",
+    ):
+        self.device = torch.device("cuda")
+        self.model = model
+        self.model.to(self.device)
         self.lr = lr
         self.epochs = epochs
         self.weight = weight
@@ -164,6 +247,7 @@ class NNcalibration:
         self.normalize_kl_by_test = normalize_kl_by_test
         self.train_weight = train_weight
         self.weight_loss_types = weight_loss_types
+        self.loss_type = loss_type
 
     def train_calibration_parameters(self, kl_1, kl_2, error_calc, dataset_name, far):
         self.val_ds_name = dataset_name
@@ -231,8 +315,12 @@ class NNcalibration:
             "frequency": 1,
         }
 
-        loss_fn = nn.BCELoss(reduce=False)
-        self.perceptron.train()
+        if self.loss_type == "MSE":
+            loss_fn = nn.MSELoss(reduce=False)
+            pass
+        else:
+            loss_fn = nn.BCELoss(reduce=False)
+        self.model.train()
 
         if self.random_subset_size is not None:
             weights = torch.zeros(
@@ -243,13 +331,13 @@ class NNcalibration:
 
         if self.train_weight:
             optimizer = torch.optim.Adam(
-                [*self.perceptron.parameters()] + [weight],
+                [*self.model.parameters()] + [weight],
                 lr=self.lr,
                 weight_decay=self.weight_decay,
             )
         else:
             optimizer = torch.optim.Adam(
-                [*self.perceptron.parameters()],
+                [*self.model.parameters()],
                 lr=self.lr,
                 weight_decay=self.weight_decay,
             )
@@ -260,7 +348,7 @@ class NNcalibration:
 
         true_index = y == 1.0
         for iter in range(self.epochs):
-            self.perceptron.train()
+            self.model.train()
             optimizer.zero_grad()
             # sample train ds subset
             if self.random_subset_size is not None:
@@ -271,16 +359,16 @@ class NNcalibration:
                 y_subset = y[indices]
                 weights[y_subset == 1.0] = 1 - weight
                 weights[y_subset == 0.0] = weight
-                pred = self.perceptron(X_norm_subset)
+                pred = self.model(X_norm_subset)
                 loss = (loss_fn(pred, y_subset) * weights).mean()
             elif self.weight_loss_types is False:
-                pred = self.perceptron(X_norm)
+                pred = self.model(X_norm)
                 loss_element_wise = loss_fn(pred, y)
                 loss = loss_element_wise[true_index].mean() * (
                     1 - torch.sigmoid(weight)
                 ) + loss_element_wise[~true_index].mean() * torch.sigmoid(weight)
             else:
-                pred = self.perceptron(X_norm)
+                pred = self.model(X_norm)
                 loss_element_wise = loss_fn(pred, y)
                 loss_false_accept = (
                     loss_element_wise[~error_calc.is_seen][
@@ -304,12 +392,16 @@ class NNcalibration:
             loss.backward()
             optimizer.step()
             scheduler.step()
-            # print(
-            #     f"Iteration {iter}, Loss: {loss.item()}, lr: {optimizer.param_groups[0]['lr']}"
-            # )
 
-            self.perceptron.eval()
-            pred_eval = self.perceptron(X_norm)
+            if iter % 100 == 0:
+                print(
+                    f"Iteration {iter}, Loss: {loss.item()}, lr: {optimizer.param_groups[0]['lr']}"
+                )
+                # Clear previous output in notebook environments for cleaner updates
+                if self.model.__class__.__name__ == "ExpTransform":
+                    print_specific_params_table_terminal(self.model, iter)
+            self.model.eval()
+            pred_eval = self.model(X_norm)
             accuracy = np.mean(
                 (pred_eval.detach().cpu().numpy() > 0.5) == y.cpu().numpy()
             )
@@ -333,8 +425,8 @@ class NNcalibration:
             X_norm = (X - self.X_mean_test) / self.X_std_test
         else:
             X_norm = (X - self.X_mean_val) / self.X_std_val
-        self.perceptron.eval()
-        predictions_perceptron = self.perceptron(X_norm)
+        self.model.eval()
+        predictions_perceptron = self.model(X_norm)
         self.draw_dencity_plot(
             X_norm.cpu(), error_calc, dataset_name, far, is_val=False
         )
@@ -364,8 +456,8 @@ class NNcalibration:
         )
         product = torch.cartesian_prod(kl_1, kl_2)
 
-        self.perceptron.eval()
-        predict_prob = self.perceptron(product)
+        self.model.eval()
+        predict_prob = self.model(product)
         z = np.reshape(predict_prob.detach().cpu().numpy(), (size, size))
         z_min, z_max = z.min(), z.max()
 

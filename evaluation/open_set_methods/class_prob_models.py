@@ -250,10 +250,10 @@ class MonteCarloPredictiveProb:
                 is_seen_calib,
                 self,
             )
-            # calibratation_set_kappa = golden_selection_search(
-            #     kappa_high, kappa_low, eps, max_iter, far_loss_func_calib, verbose=True
-            # )
-            calibratation_set_kappa = self.gallery_kappa
+            calibratation_set_kappa = golden_selection_search(
+                kappa_high, kappa_low, eps, max_iter, far_loss_func_calib, verbose=False
+            )
+            # calibratation_set_kappa = self.gallery_kappa
             gallery_unc_scaled_calib = (
                 np.ones_like(gallery_unc_calib) * calibratation_set_kappa
             )
