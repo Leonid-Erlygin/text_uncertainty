@@ -145,12 +145,15 @@ class IDResBlock(nn.Module):
 
 
 class ExpTransform(nn.Module):
-    def __init__(self, use_shift=False, use_alpha=False):
+    def __init__(self, use_shift=False, use_alpha=False, use_T=True):
         super().__init__()
         self.use_shift = use_shift
         self.use_alpha = use_alpha
-        self.T1 = nn.Parameter(torch.tensor(1.0))
-        self.T2 = nn.Parameter(torch.tensor(1.0))
+        self.use_T = use_T
+        assert self.use_alpha or self.use_shift or self.use_T
+        if self.use_T:
+            self.T1 = nn.Parameter(torch.tensor(1.0))
+            self.T2 = nn.Parameter(torch.tensor(1.0))
         if self.use_alpha:
             self.alpha1 = nn.Parameter(torch.tensor(1.0))
             self.alpha2 = nn.Parameter(torch.tensor(1.0))
@@ -165,18 +168,15 @@ class ExpTransform(nn.Module):
         if self.use_shift:
             kl1 = kl1 - self.shift1
             kl2 = kl2 - self.shift2
-
-        # if self.use_alpha:
-        #     return self.sigmoid(self.alpha1) * torch.exp(kl1 / self.T1) + (1 - self.sigmoid(self.alpha1)) * torch.exp(kl2 / self.T2)
-        # else:
-        #     return torch.exp(kl1 / self.T1) + torch.exp(kl2 / self.T2)
+        if self.use_T:
+            kl1 = kl1 / self.T1
+            kl2 = kl2 / self.T2
         if self.use_alpha:
             return self.sigmoid(
-                self.alpha1 * torch.exp(kl1 / self.T1)
-                + self.alpha2 * torch.exp(kl2 / self.T2)
+                self.alpha1 * torch.exp(kl1) + self.alpha2 * torch.exp(kl2)
             )
         else:
-            return self.sigmoid(torch.exp(kl1 / self.T1) + torch.exp(kl2 / self.T2))
+            return self.sigmoid(torch.exp(kl1) + torch.exp(kl2))
         # if self.use_shift:
         #     kl1 = kl1 - self.shift1
         #     kl2 = kl2 - self.shift2
@@ -398,8 +398,8 @@ class NNcalibration:
                     f"Iteration {iter}, Loss: {loss.item()}, lr: {optimizer.param_groups[0]['lr']}"
                 )
                 # Clear previous output in notebook environments for cleaner updates
-                if self.model.__class__.__name__ == "ExpTransform":
-                    print_specific_params_table_terminal(self.model, iter)
+                # if self.model.__class__.__name__ == "ExpTransform":
+                #     print_specific_params_table_terminal(self.model, iter)
             self.model.eval()
             pred_eval = self.model(X_norm)
             accuracy = np.mean(
@@ -501,13 +501,14 @@ class NNcalibration:
 
 
 class Standartization:
-    def __init__(self, normalize_kl_by_test=False, log_dir=None, vis=False):
+    def __init__(self, normalize_kl_by_test=False, log_dir=None, vis=True):
         self.normalize_kl_by_test = normalize_kl_by_test
         self.log_dir = log_dir
         self.vis = vis
         self.device = torch.device("cpu")
 
     def train_calibration_parameters(self, kl_1, kl_2, error_calc, dataset_name, far):
+        self.val_ds_name = dataset_name
         X = torch.tensor(
             np.concatenate([kl_1[None, :], kl_2[None, :]], axis=0).T,
             dtype=torch.float32,

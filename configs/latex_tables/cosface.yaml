@@ -12,12 +12,12 @@ defaults:
   - meta_data@metric_order: metric_order
 
 
-datasets: ["IJBC", "IJBB"] #, "whale", "large_12k-perspk5"]
+datasets: ["IJBC", "IJBB"] #["IJBC", "IJBB", "whale", "large_12k-perspk5"]
 
 task: filter
 
 # CHANGE
-metric_table_path: /app/outputs/experiments/new_calib_all_ds/open_set_identification/{dataset}/filter_tabels/f1_class_prr_filtering.csv
+metric_table_path: outputs/experiments/cosface/open_set_identification/{dataset}/filter_tabels/f1_class_prr_filtering.csv
 
 caption: >
   Prediction Rejection Ratios (PRR, $\uparrow$) for $F_1$ filtering curve for the four considered datasets IJB-C, IJB-B, Whale, VB-Eval-L.

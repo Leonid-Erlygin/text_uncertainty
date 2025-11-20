@@ -10,6 +10,10 @@ create_pool_plot: False
 
 test_datasets:
   - _target_: evaluation.test_datasets.FaceRecogntionDataset
+    dataset_name: IJBB
+    dataset_path: /app/datasets/arcface_ijb/IJBB
+
+  - _target_: evaluation.test_datasets.FaceRecogntionDataset
     dataset_name: IJBC
     dataset_path: /app/datasets/arcface_ijb/IJBC
 
@@ -151,9 +155,11 @@ open_set_identification_methods:
       calibration_embs_name: scf_haaml_casia
       calibration_transform:
         _target_: evaluation.open_set_methods.calibration_methods.NNcalibration
-        hidden_size: 6
-        num_layers: 3
-        use_bn: False
+        model:
+          _target_: evaluation.open_set_methods.calibration_methods.MLP
+          hidden_size: 6
+          num_layers: 3
+          use_bn: False
         lr: 0.001
         epochs: 2000
         weight: 0
