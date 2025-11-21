@@ -119,11 +119,9 @@ class MetricLearningModel(LightningModule):
         loss: torch.nn.Module,
         num_labels: int,
         scheduler_params,
-        num_features: int = 2,
-        batch_size: int = 128,
-        learning_rate: float = 1e-4,
-        weight_decay: float = 5e-5,
-        num_workers: int = 2,
+        optimizer_params,
+        num_features: int,
+
     ) -> None:
         """Initialize MetricLearningModel.
 
@@ -137,7 +135,6 @@ class MetricLearningModel(LightningModule):
         :param num_workers - number of CPUs to be used (for dataloaders)
         """
         super().__init__()
-        self.weight_decay = weight_decay
         self.backbone = backbone
         self.loss = loss
 
@@ -148,7 +145,7 @@ class MetricLearningModel(LightningModule):
         torch.nn.init.kaiming_uniform_(self.softmax_weights, a=math.sqrt(5))
         self.validation_step_outputs = []
         self.scheduler_params = scheduler_params
-        self.save_hyperparameters()
+        self.optimizer_params = optimizer_params
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Forward pass through the model.
@@ -179,9 +176,23 @@ class MetricLearningModel(LightningModule):
         features, logits = self(images)
         loss = self.loss(logits, labels)
 
-        # log loss value
+        # Accuracy
+        preds = logits.argmax(dim=1)
+        acc = (preds == labels).float().mean()
+
+        self.log("train_acc", acc, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
         self.log("train_loss", loss.item(), prog_bar=True)
 
+        with torch.no_grad():
+            # Normalize class centers (ensure unit norm)
+            class_centers = F.normalize(self.softmax_weights, dim=1)  # [C, D]
+            # Gather centers for true labels
+            true_centers = class_centers[labels]  # [B, D]
+            # Cosine similarity = dot product (both L2-normalized)
+            cos_sim = (features * true_centers).sum(dim=1)  # [B]
+            avg_cos_sim = cos_sim.mean()
+
+        self.log("train_cos_sim", avg_cos_sim, on_step=True)
         return {"loss": loss, "out": features, "label": labels}
 
     def validation_step(
@@ -199,9 +210,10 @@ class MetricLearningModel(LightningModule):
         loss = self.loss(logits, labels)
         # log loss value
         self.log("val_loss", loss.item(), prog_bar=True)
-        self.validation_step_outputs.append(
-            {"loss": loss, "out": features, "label": labels}
-        )
+        self.validation_step_outputs.append({
+            "preds": logits.argmax(dim=1).cpu(),
+            "labels": labels.cpu()
+        })
         # return
 
     def on_validation_epoch_end(self) -> None:
@@ -227,14 +239,16 @@ class MetricLearningModel(LightningModule):
         accuracy = np.mean(predictions == labels)
         self.log("val_accuracy", accuracy.item())
 
-    def configure_optimizers(self) -> Dict[str, torch.optim.Optimizer]:
-        """Create optimizer for model training."""
+    def configure_optimizers(self):
         params = list(self.parameters())
-        optimizer = torch.optim.AdamW(
+        optimizer = getattr(
+            importlib.import_module(self.optimizer_params["optimizer_path"]),
+            self.optimizer_params["optimizer_name"],
+        )(
             params,
-            lr=1e-4,
-            weight_decay=self.weight_decay,
+            **self.optimizer_params["params"],
         )
+
         return {
             "optimizer": optimizer,
             "lr_scheduler": {
@@ -245,6 +259,7 @@ class MetricLearningModel(LightningModule):
                 "interval": self.scheduler_params["interval"],
             },
         }
+
 
     # def train_dataloader(self) -> DataLoader:
     #     """Create training dataloader."""

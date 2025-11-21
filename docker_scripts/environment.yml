@@ -25,7 +25,7 @@ dependencies:
   - optuna-integration[pytorch_lightning]
   - pysoundfile
   - pip:
-    - torch==2.1.1
+    - torch
     - ipywidgets
     - python_speech_features
     - scikit-learn-intelex
@@ -34,6 +34,7 @@ dependencies:
     - onnx
     - torchaudio
     - thop
+    - transformers
     - torch-summary
     - optuna
     - timm
@@ -47,14 +48,14 @@ dependencies:
     - progressbar2
     - exman
     - easydict
-    - pytorch-lightning==2.0.0
+    - pytorch-lightning
     - opencv-python
-    - mxnet-mkl==1.6.0
+    - mxnet-mkl
     - bcolz-zipline
     - "dask[array]"
     - botorch
     - plotly
-    - numpy==1.23.1
+    - numpy
     - PyYAML
     - scipy
     - pydrive2
