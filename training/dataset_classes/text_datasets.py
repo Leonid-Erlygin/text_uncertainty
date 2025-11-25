@@ -6,6 +6,7 @@ import torch
 from transformers import AutoTokenizer
 import numpy as np
 
+
 class TextDatasets(pl.LightningDataModule):
     def __init__(
         self,
@@ -32,11 +33,7 @@ class TextDatasets(pl.LightningDataModule):
         labels = torch.tensor([item["label"] for item in batch], dtype=torch.long)
 
         tokenized = self.tokenizer(
-            texts,
-            padding=True,
-            truncation=True,
-            max_length=256,
-            return_tensors="pt"
+            texts, padding=True, truncation=True, max_length=256, return_tensors="pt"
         )
 
         # Pack tokenized inputs into a dict (this plays the role of "images")
@@ -48,6 +45,7 @@ class TextDatasets(pl.LightningDataModule):
 
         # Return as (inputs_dict, labels) → matches (images, labels) unpacking
         return tokenized_inputs, labels
+
     def train_dataloader(self):
         return DataLoader(
             self.train_dataset,
@@ -58,6 +56,7 @@ class TextDatasets(pl.LightningDataModule):
             collate_fn=self.collate_fn,  # <-- critical
         )
 
+
 class TextClassificationDataset(Dataset):
     def __init__(
         self,
@@ -66,27 +65,26 @@ class TextClassificationDataset(Dataset):
     ):
         # Load data
         df = pd.read_csv(
-            Path(root_dir) / 'in_distribution_train.csv',
+            Path(root_dir) / "in_distribution_train.csv",
             header=None,
             usecols=[0, 2],
-            names=['class', 'text'],
-            quotechar='"'
+            names=["class", "text"],
+            quotechar='"',
         )
-        unique_classes = sorted(np.unique(df['class'].values))  # [2, 3, 5, 6, 7, 8]
+        unique_classes = sorted(np.unique(df["class"].values))  # [2, 3, 5, 6, 7, 8]
         class_to_idx = {cls: idx for idx, cls in enumerate(unique_classes)}
-        df['class'] = df['class'].map(class_to_idx)
-        df['text'] = df['text'].str.strip('"\'')
-        
-        self.texts = df['text'].values
-        self.labels = df['class'].values
-        self.tokenizer_name = tokenizer_name  # store for compatibility (e.g., num classes, etc.)
+        df["class"] = df["class"].map(class_to_idx)
+        df["text"] = df["text"].str.strip("\"'")
+
+        self.texts = df["text"].values
+        self.labels = df["class"].values
+        self.tokenizer_name = (
+            tokenizer_name  # store for compatibility (e.g., num classes, etc.)
+        )
 
     def __getitem__(self, index):
         # Return RAW text and label — NO tokenization here
-        return {
-            "text": self.texts[index],
-            "label": self.labels[index]
-        }
+        return {"text": self.texts[index], "label": self.labels[index]}
 
     def __len__(self):
         return len(self.labels)

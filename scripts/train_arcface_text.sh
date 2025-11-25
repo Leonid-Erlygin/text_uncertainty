@@ -9,7 +9,7 @@ docker run \
  --rm \
  --init \
  -v $(dirname "$PWD"):/app \
- --gpus '"device=1"' \
+ --gpus '"device=2"' \
  -w="/app" \
  ${USER}_$(basename $(dirname "$PWD")) \
  python3 training/trainers/train.py -cn=text_model

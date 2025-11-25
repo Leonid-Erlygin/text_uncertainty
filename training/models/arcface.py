@@ -121,7 +121,6 @@ class MetricLearningModel(LightningModule):
         scheduler_params,
         optimizer_params,
         num_features: int,
-
     ) -> None:
         """Initialize MetricLearningModel.
 
@@ -180,7 +179,14 @@ class MetricLearningModel(LightningModule):
         preds = logits.argmax(dim=1)
         acc = (preds == labels).float().mean()
 
-        self.log("train_acc", acc, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
+        self.log(
+            "train_acc",
+            acc,
+            on_step=False,
+            on_epoch=True,
+            prog_bar=True,
+            sync_dist=True,
+        )
         self.log("train_loss", loss.item(), prog_bar=True)
 
         with torch.no_grad():
@@ -210,10 +216,9 @@ class MetricLearningModel(LightningModule):
         loss = self.loss(logits, labels)
         # log loss value
         self.log("val_loss", loss.item(), prog_bar=True)
-        self.validation_step_outputs.append({
-            "preds": logits.argmax(dim=1).cpu(),
-            "labels": labels.cpu()
-        })
+        self.validation_step_outputs.append(
+            {"preds": logits.argmax(dim=1).cpu(), "labels": labels.cpu()}
+        )
         # return
 
     def on_validation_epoch_end(self) -> None:
@@ -259,7 +264,6 @@ class MetricLearningModel(LightningModule):
                 "interval": self.scheduler_params["interval"],
             },
         }
-
 
     # def train_dataloader(self) -> DataLoader:
     #     """Create training dataloader."""

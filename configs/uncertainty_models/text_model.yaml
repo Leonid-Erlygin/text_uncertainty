@@ -14,7 +14,7 @@ trainer:
   - _target_: pytorch_lightning.callbacks.LearningRateMonitor
     logging_interval: "step"
   max_epochs: 2
-  precision: 16
+  #precision: 16
   accelerator: gpu
   devices: 1
   num_sanity_val_steps: 0
@@ -34,17 +34,15 @@ model:
       freeze_backbone: False
     loss:
         _target_: training.models.losses.ArcFaceLoss
-        s: 64
+        s: 4
     num_labels: 6
     num_features: 768
     optimizer_params:
         optimizer_path: torch.optim
-        optimizer_name: SGD
+        optimizer_name: AdamW
         params:
-            lr: 1e-1
-            weight_decay: 5e-4
-            momentum: 0.9
-            nesterov: True
+            lr: 2e-5
+            weight_decay: 1e-4
     scheduler_params:
         scheduler: OneCycleLR
         params:

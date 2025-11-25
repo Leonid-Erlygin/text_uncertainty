@@ -6,6 +6,7 @@ from transformers import AutoModel
 import torch
 import torch.nn as nn
 
+
 class EmbModel(torch.nn.Module):
     def __init__(self) -> None:
         super().__init__()
@@ -48,16 +49,15 @@ class ResNet(torch.nn.Module):
 
     def forward(self, x):
         return self.backbone(x)
-    
 
 
 class BERTEmbedder(torch.nn.Module):
     def __init__(
         self,
         model_name: str = "bert-base-uncased",
-        num_features: int = 768,          # final embedding dim (on sphere)
-        bottleneck_dim: int = 768,        # dim before final projection (often same as num_features)
-        projection: bool = False,         # optional linear projection layer
+        num_features: int = 768,  # final embedding dim (on sphere)
+        bottleneck_dim: int = 768,  # dim before final projection (often same as num_features)
+        projection: bool = False,  # optional linear projection layer
         freeze_backbone: bool = False,
     ):
         super().__init__()
@@ -102,5 +102,5 @@ class BERTEmbedder(torch.nn.Module):
 
         return {
             "bottleneck_feature": bottleneck_feat,  # for SCF confidence κ(x)
-            "feature": final_feat                  # for ArcFace classification
+            "feature": final_feat,  # for ArcFace classification
         }
