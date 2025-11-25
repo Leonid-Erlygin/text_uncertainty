@@ -57,29 +57,38 @@ class BERTEmbedder(torch.nn.Module):
         model_name: str = "bert-base-uncased",
         num_features: int = 768,  # final embedding dim (on sphere)
         bottleneck_dim: int = 768,  # dim before final projection (often same as num_features)
-        projection: bool = False,  # optional linear projection layer
+        freeze_projection: bool = False,
         freeze_backbone: bool = False,
+        backbone_path: str = None,
     ):
         super().__init__()
         self.num_features = num_features
         self.bottleneck_dim = bottleneck_dim
         self.backbone = AutoModel.from_pretrained(model_name)
 
-        # Optional linear head (common in metric learning)
-        if projection:
-            self.proj = nn.Linear(self.backbone.config.hidden_size, bottleneck_dim)
-            self.final_proj = nn.Linear(bottleneck_dim, num_features)
-        else:
-            # Use identity (directly use [CLS])
-            self.proj = nn.Identity()
-            self.final_proj = nn.Identity()
-            assert bottleneck_dim == num_features == self.backbone.config.hidden_size
+        self.proj = nn.Linear(self.backbone.config.hidden_size, bottleneck_dim)
+        self.proj_bn = nn.BatchNorm1d(bottleneck_dim, bottleneck_dim)
+        self.final_proj = nn.Linear(bottleneck_dim, num_features)
+        self.relu = nn.PReLU()
 
+        # Load fine-tuned backbone if provided
+        if backbone_path is not None:
+            state_dict = torch.load(backbone_path, map_location="cpu")
+            # But better: your saved dict is already clean (just BERT)
+            self.load_state_dict(state_dict, strict=True)
         if freeze_backbone:
             for param in self.backbone.parameters():
                 param.requires_grad = False
+        if freeze_projection:
             for param in self.proj.parameters():
                 param.requires_grad = False
+            for param in self.proj_bn.parameters():
+                param.requires_grad = False
+            for param in self.relu.parameters():
+                param.requires_grad = False
+            for param in self.final_proj.parameters():
+                param.requires_grad = False
+            self.proj_bn.eval()
 
     def forward(self, batch: dict):
         input_ids = batch["input_ids"]
@@ -97,6 +106,8 @@ class BERTEmbedder(torch.nn.Module):
         bottleneck_feat = self.proj(cls_emb)  # (B, bottleneck_dim)
 
         # Final feature (for ArcFace): L2-normalized on hypersphere
+        bottleneck_feat = self.proj_bn(bottleneck_feat)
+        bottleneck_feat = self.relu(bottleneck_feat)
         final_feat = self.final_proj(bottleneck_feat)  # (B, num_features)
         final_feat = F.normalize(final_feat, p=2, dim=1)
 
