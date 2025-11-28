@@ -8,6 +8,7 @@ from evaluation.open_set_methods.posterior_prob_based import (
     PosteriorProbability,
 )
 from evaluation.metrics import FrrFarIdent
+from evaluation.distance_functions.open_set_identification import CosineSim
 
 
 class SimilarityBasedPrediction(OpenSetMethod):
@@ -24,6 +25,7 @@ class SimilarityBasedPrediction(OpenSetMethod):
         calibration_embs_name=None,
         calib_strategy="norm_val",
         oracle_predictions: bool = False,
+        predictor=None,
     ) -> None:
         super().__init__()
         self.distance_function = distance_function
@@ -35,6 +37,7 @@ class SimilarityBasedPrediction(OpenSetMethod):
         self.T_data_unc = T_data_unc
         self.calibration_set = calibration_set
         self.oracle_predictions = oracle_predictions
+        self.predictor = predictor
         if self.calibration_set is None:
             return
         self.calib_strategy = calib_strategy
@@ -75,6 +78,26 @@ class SimilarityBasedPrediction(OpenSetMethod):
         self.tau = np.sort(out_of_gallery_scores)[
             int(out_of_gallery_scores.shape[0] * (1 - self.far))
         ]
+        if self.predictor is not None:
+            assert self.predictor == "AccScore"
+            # use cosine sim on pooled embeddings to perform predictions
+            # 1. get default pool features
+            gallery_feats_avg = gallery_feats[-6:, 1:]
+            gallery_unc_avg = gallery_feats[-6:, 0]
+            cosine_distance = CosineSim()
+            similarity_matrix_avg = cosine_distance(
+                probe_feats,
+                probe_unc,
+                gallery_feats_avg,
+                gallery_unc_avg,
+            )
+            self.similarity_matrix_avg = np.mean(similarity_matrix_avg, axis=1)
+            self.probe_score_avg = self.acceptance_score(self.similarity_matrix_avg)
+            out_of_gallery_scores = self.probe_score_avg[~is_seen]
+            self.tau_avg = np.sort(out_of_gallery_scores)[
+                int(out_of_gallery_scores.shape[0] * (1 - self.far))
+            ]
+
         if self.calibration_set is not None:
             probe_feats_calib = self.probe_pooled_templates_calib["g1"][
                 "template_pooled_features"
@@ -102,6 +125,9 @@ class SimilarityBasedPrediction(OpenSetMethod):
             self.probe_score_calib = self.acceptance_score(self.similarity_matrix_calib)
 
     def predict(self):
+        if self.predictor is not None:
+            predict_id = np.argmax(self.similarity_matrix_avg, axis=-1)
+            return predict_id, self.probe_score_avg < self.tau_avg
         predict_id = np.argmax(self.similarity_matrix, axis=-1)
         return predict_id, self.probe_score < self.tau
 

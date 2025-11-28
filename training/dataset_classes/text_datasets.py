@@ -14,13 +14,14 @@ class TextDatasets(pl.LightningDataModule):
         batch_size: int = 16,
         num_workers: int = 4,
         tokenizer_name: str = "bert-base-uncased",
+        predict_dataset: Dataset = None,
     ):
         super().__init__()
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.tokenizer_name = tokenizer_name
         self.train_dataset = train_dataset
-
+        self.predict_dataset = predict_dataset
         # Instantiate tokenizer once (in main process)
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
 
@@ -30,21 +31,33 @@ class TextDatasets(pl.LightningDataModule):
 
     def collate_fn(self, batch):
         texts = [item["text"] for item in batch]
-        labels = torch.tensor([item["label"] for item in batch], dtype=torch.long)
 
         tokenized = self.tokenizer(
             texts, padding=True, truncation=True, max_length=256, return_tensors="pt"
         )
 
-        # Pack tokenized inputs into a dict (this plays the role of "images")
         tokenized_inputs = {
             "input_ids": tokenized["input_ids"],
             "attention_mask": tokenized["attention_mask"],
-            # add "token_type_ids" if your tokenizer/bert uses them
         }
 
-        # Return as (inputs_dict, labels) → matches (images, labels) unpacking
-        return tokenized_inputs, labels
+        # Check if labels are present (i.e., training/val mode)
+        if "label" in batch[0]:
+            labels = torch.tensor([item["label"] for item in batch], dtype=torch.long)
+            return tokenized_inputs, labels
+        else:
+            # Prediction mode: no labels
+            return tokenized_inputs
+
+    def predict_dataloader(self):
+        return DataLoader(
+            self.predict_dataset,
+            batch_size=self.batch_size,
+            drop_last=False,
+            shuffle=False,
+            num_workers=self.num_workers,
+            collate_fn=self.collate_fn,
+        )
 
     def train_dataloader(self):
         return DataLoader(
@@ -88,3 +101,27 @@ class TextClassificationDataset(Dataset):
 
     def __len__(self):
         return len(self.labels)
+
+
+class TextPredictionDataset(Dataset):
+    def __init__(
+        self,
+        root_dir: str,
+        tokenizer_name: str = "bert-base-uncased",  # will be used only for info, not tokenization here
+    ):
+        root_dir = Path(root_dir)
+        paths = []
+        with open(root_dir / "meta" / f"{root_dir.parts[-1]}_face_tid_mid.txt") as fd:
+            for line in fd:
+                paths.append(line.split(" ")[0])
+        self.texts = []
+        for path in paths:
+            with open(root_dir / path) as fd:
+                self.texts.append(fd.read())
+
+    def __getitem__(self, index):
+        # Return RAW text and label — NO tokenization here
+        return {"text": self.texts[index]}
+
+    def __len__(self):
+        return len(self.texts)

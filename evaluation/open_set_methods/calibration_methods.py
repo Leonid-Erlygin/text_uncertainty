@@ -233,6 +233,7 @@ class NNcalibration:
         log_dir=None,
         weight_loss_types=False,
         loss_type="CE",
+        use_norm=True,
     ):
         self.device = torch.device("cuda")
         self.model = model
@@ -248,6 +249,7 @@ class NNcalibration:
         self.train_weight = train_weight
         self.weight_loss_types = weight_loss_types
         self.loss_type = loss_type
+        self.use_norm = use_norm
 
     def train_calibration_parameters(self, kl_1, kl_2, error_calc, dataset_name, far):
         self.val_ds_name = dataset_name

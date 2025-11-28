@@ -145,18 +145,39 @@ class SphereConfidenceFace(LightningModule):
         }
 
     def predict_step(self, batch, batch_idx):
-        if len(batch) == 4:
-            # five ds pred
-            images_batch, _, _, _ = batch
-        elif len(batch) == 2:
-            # ms1m pred
-            images_batch, labels = batch
-            return self(images_batch)
+        # Handle tuple: (inputs_dict, labels) or (inputs_dict, _, _, _)
+        if isinstance(batch, (tuple, list)):
+            if len(batch) == 4:
+                inputs = batch[0]
+            elif len(batch) == 2:
+                inputs = batch[0]  # ignore labels in prediction
+            else:
+                inputs = batch[0]
         else:
-            images_batch = batch
+            # batch is already inputs_dict (e.g., from prediction dataloader)
+            inputs = batch
+
+        # Optional: permute only makes sense for images — skip for text
         if self.permute_batch:
-            images_batch = images_batch.permute(0, 3, 1, 2)
-        return self(images_batch)
+            # Only apply if inputs is a tensor (not dict)
+            if isinstance(inputs, torch.Tensor):
+                inputs = inputs.permute(0, 3, 1, 2)
+
+        return self(inputs)
+
+    # def predict_step(self, batch, batch_idx):
+    #     if len(batch) == 4:
+    #         # five ds pred
+    #         images_batch, _, _, _ = batch
+    #     elif len(batch) == 2:
+    #         # ms1m pred
+    #         images_batch, labels = batch
+    #         return self(images_batch)
+    #     else:
+    #         images_batch = batch
+    #     if self.permute_batch:
+    #         images_batch = images_batch.permute(0, 3, 1, 2)
+    #     return self(images_batch)
 
     def validation_step(self, batch, batch_idx):
         images, labels = batch

@@ -47,7 +47,7 @@ class FarLossCalc:
             all_classes_log_prob.shape[-1] - 1
         )
         far = np.mean(was_rejected[~self.is_seen] == False)
-        # print(f"Found kappa {np.round(kappa,4)} for far {far}")
+        print(f"Found kappa {np.round(kappa,4)} for far {far}")
         return -np.abs(far - self.target_far) / self.target_far
 
 
@@ -128,14 +128,14 @@ class PosteriorProbability(OpenSetMethod):
 
         if self.gallery_kappa is None:
             kappa_low = 300
-            kappa_high = 10000
+            kappa_high = 200000
             max_iter = 20
             eps = 0.0005
             far_loss_func = FarLossCalc(
                 self.beta, T, self.class_model, self.far, is_seen, similarity_matrix
             )
             self.gallery_kappa = golden_selection_search(
-                kappa_high, kappa_low, eps, max_iter, far_loss_func
+                kappa_high, kappa_low, eps, max_iter, far_loss_func, verbose=False
             )
             print(f"Found kappa {np.round(self.gallery_kappa,4)} for far {self.far}")
         if self.class_model == "vMF_Power":
@@ -501,6 +501,7 @@ class PosteriorProb:
             self.log_normalizer = (
                 (self.n - 1) * np.log(self.kappa) - self.n * np.log(2 * np.pi) - log_iv
             )
+            self.log_alpha = np.log(self.alpha)
         elif self.class_model == "power":
             log_alpha_power = (
                 loggamma(d / 2)

@@ -173,7 +173,7 @@ class MonteCarloPredictiveProb:
             # find kappa
             is_seen = np.isin(probe_unique_ids, g_unique_ids)
             kappa_low = 300
-            kappa_high = 10000
+            kappa_high = 100000
             max_iter = 15
             eps = 0.0005
             far_loss_func = FarLossCalc(
@@ -185,6 +185,7 @@ class MonteCarloPredictiveProb:
                 self.far,
                 is_seen,
                 self,
+                verbose=True,
             )
             self.gallery_kappa = golden_selection_search(
                 kappa_high, kappa_low, eps, max_iter, far_loss_func
@@ -237,7 +238,7 @@ class MonteCarloPredictiveProb:
                 "template_pooled_data_unc"
             ]
             kappa_low = 200
-            kappa_high = 10000
+            kappa_high = 100000
             max_iter = 15
             eps = 0.0005
             far_loss_func_calib = FarLossCalc(
@@ -249,6 +250,7 @@ class MonteCarloPredictiveProb:
                 self.far,
                 is_seen_calib,
                 self,
+                verbose=True,
             )
 
             calibratation_set_kappa = golden_selection_search(
@@ -466,8 +468,14 @@ class MonteCarloPredictiveProb:
         mean_gallery_probs = torch.mean(gallery_probs, axis=1)
 
         # compute kl_1
+        # kl_1 = torch.sum(
+        #     mean_gallery_probs * torch.log(mean_gallery_probs / p_c), axis=1
+        # )
+
         kl_1 = torch.sum(
-            mean_gallery_probs * torch.log(mean_gallery_probs / p_c), axis=1
+            torch.xlogy(mean_gallery_probs, mean_gallery_probs)
+            - mean_gallery_probs * np.log(p_c),
+            axis=1,
         )
 
         # compute kl_2

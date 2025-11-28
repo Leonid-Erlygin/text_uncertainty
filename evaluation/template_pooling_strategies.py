@@ -78,6 +78,30 @@ class PoolingDefault(AbstractTemplatePooling):
         )
 
 
+class Identity(AbstractTemplatePooling):
+    def __call__(
+        self,
+        img_feats: np.ndarray,
+        raw_unc: np.ndarray,
+        templates: np.ndarray,
+        medias: np.ndarray,
+    ):
+
+        template_norm_feats = normalize(img_feats)
+        embs_with_labels = np.concatenate(
+            [templates[:, None], template_norm_feats], axis=1
+        )
+        # also concatenate default avg pooling
+        avg_pool = PoolingDefault()
+        avg_embs, avg_unc = avg_pool(img_feats, raw_unc, templates, medias)
+        avg_info = np.concatenate([avg_unc, avg_embs], axis=1)
+        embs_with_labels = np.concatenate([embs_with_labels, avg_info], axis=0)
+        return (
+            embs_with_labels,
+            raw_unc,
+        )
+
+
 class PoolingConcentration(AbstractTemplatePooling):
     def __call__(
         self,
