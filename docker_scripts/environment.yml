@@ -1,13 +1,12 @@
 name: base
 channels:
   - pytorch
-  - anaconda
   - conda-forge
   - defaults
 dependencies:
+  - python=3.9.7
   - psutil
   - ipykernel
-  - python=3.9.7
   - conda-forge::scikit-image
   - conda-forge::termcolor
   - conda-forge::tensorboard
@@ -15,57 +14,55 @@ dependencies:
   - conda-forge::rclone
   - conda-forge::hydra-core
   - conda-forge::numexpr
-  - anaconda::ipython
-  - anaconda::path
+  - conda-forge::ipython
+  - conda-forge::path.py
+  - conda-forge::tqdm
+  - conda-forge::nose
+  - conda-forge::cython
+  - conda-forge::optuna
+  - conda-forge::pysoundfile
+  - conda-forge::openblas-devel
+  - conda-forge::wandb
+  - conda-forge::onnx
+  - conda-forge::torchaudio
+  - conda-forge::thop
+  - conda-forge::transformers
+  - conda-forge::torch-summary
+  - conda-forge::timm
+  - conda-forge::onnx2torch
+  - conda-forge::albumentations
+  - conda-forge::tabulate
+  - conda-forge::onnxruntime-gpu
+  - conda-forge::glob2
+  - conda-forge::jsonargparse
+  - conda-forge::torchvision
+  - conda-forge::progressbar2
+  - conda-forge::exman
+  - conda-forge::easydict
+  - conda-forge::pytorch-lightning
+  - conda-forge::opencv
+  - conda-forge::mxnet
+  - conda-forge::bcolz
+  - conda-forge::dask
+  - conda-forge::botorch
+  - conda-forge::plotly
+  - conda-forge::numpy
+  - conda-forge::pyyaml
+  - conda-forge::scipy
+  - conda-forge::pydrive2
+  - conda-forge::pandas
+  - conda-forge::scikit-learn
+  - conda-forge::imageio
+  - conda-forge::matplotlib
+  - conda-forge::seaborn
+  - conda-forge::scikit-learn-intelex
+  - conda-forge::black
+  - conda-forge::geotorch
+  - conda-forge::mlflow
   - pip
-  - openblas-devel
-  - tqdm
-  - nose
-  - cython
-  - optuna-integration[pytorch_lightning]
-  - pysoundfile
   - pip:
-    - torch
-    - ipywidgets
-    - python_speech_features
-    - scikit-learn-intelex
-    - numexpr
-    - wandb
-    - onnx
-    - torchaudio
-    - thop
-    - transformers
-    - torch-summary
-    - optuna
-    - timm
-    - onnx2torch
-    - albumentations
-    - tabulate
-    - onnxruntime-gpu
-    - glob2
-    - jsonargparse[signatures]
-    - torchvision
-    - progressbar2
-    - exman
-    - easydict
-    - pytorch-lightning
-    - opencv-python
-    - mxnet-mkl
-    - bcolz-zipline
-    - "dask[array]"
-    - botorch
-    - plotly
-    - numpy
-    - PyYAML
-    - scipy
-    - pydrive2
-    - pandas
-    - scikit-learn
-    - tqdm
-    - imageio
-    - matplotlib
-    - seaborn
-    - scikit-learn-intelex
-    - "black[jupyter]"
-    - geotorch
-    - mlflow
+    # ONLY keep packages NOT available in conda-forge
+    - "jsonargparse[signatures]"  # if conda version lacks extras
+    - "black[jupyter]"            # if needed
+    - "dask[array]"               # usually not needed if conda dask installed
+    - "optuna-integration[pytorch_lightning]"  # if conda doesn't provide it
