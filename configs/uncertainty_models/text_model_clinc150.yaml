@@ -9,17 +9,17 @@ trainer:
   callbacks:
   - _target_: pytorch_lightning.callbacks.ModelCheckpoint 
     every_n_epochs: 1
-    dirpath: outputs/bert_arcface_yahoo
+    dirpath: outputs/bert_arcface_clinc150
     save_last: True
   - _target_: pytorch_lightning.callbacks.LearningRateMonitor
     logging_interval: "step"
-  max_epochs: 2
+  max_epochs: 4
   #precision: 16
   accelerator: gpu
   devices: 1
   num_sanity_val_steps: 0
   log_every_n_steps: 3
-  default_root_dir: outputs/bert_arcface_yahoo
+  default_root_dir: outputs/bert_arcface_clinc150
   enable_checkpointing: true
   
 
@@ -47,8 +47,8 @@ model:
         scheduler: OneCycleLR
         params:
             max_lr: 1e-2
-            steps_per_epoch: 6562
-            epochs: 2
+            steps_per_epoch: 117
+            epochs: 4
             div_factor: 1e1
             final_div_factor: 1e2
         interval: step
@@ -60,11 +60,3 @@ data:
     batch_size: 128
     num_workers: 32
     max_length: 64
-# data:
-#     _target_: training.dataset_classes.text_datasets.TextDatasets
-#     tokenizer_name: "bert-base-uncased"
-#     train_dataset:
-#         _target_: training.dataset_classes.text_datasets.TextClassificationDataset
-#         root_dir: /app/datasets/text_datasets/yahoo_answers_csv
-#     batch_size: 128
-#     num_workers: 32

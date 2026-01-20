@@ -175,7 +175,15 @@ class Clinc150DataModule(pl.LightningDataModule):
     #     )
 
     def predict_dataloader(self):
-        return DataLoader(
+        val_loader = DataLoader(
+            self.val_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            drop_last=False,
+            num_workers=self.num_workers,
+            collate_fn=self.collate_fn,
+        )
+        test_loader = DataLoader(
             self.test_dataset,
             batch_size=self.batch_size,
             shuffle=False,
@@ -183,6 +191,7 @@ class Clinc150DataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
             collate_fn=self.collate_fn,
         )
+        return [val_loader, test_loader]
 
 
 class TextDatasets(pl.LightningDataModule):
