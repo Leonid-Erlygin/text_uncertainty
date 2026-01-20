@@ -1,12 +1,10 @@
 name: base
 channels:
-  - pytorch
   - conda-forge
   - defaults
 dependencies:
-  - python=3.9.7
-  - psutil
-  - ipykernel
+  - conda-forge::psutil
+  - conda-forge::ipykernel
   - conda-forge::scikit-image
   - conda-forge::termcolor
   - conda-forge::tensorboard
@@ -59,7 +57,7 @@ dependencies:
   - conda-forge::black
   - conda-forge::geotorch
   - conda-forge::mlflow
-  - pip
+  - conda-forge::pip
   - pip:
     # ONLY keep packages NOT available in conda-forge
     - "jsonargparse[signatures]"  # if conda version lacks extras

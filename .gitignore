@@ -13,6 +13,7 @@ multirun
 .hydra
 .vscode
 datasets
+external
 notebooks/misc
 unsorted_data
 downloads_torrent

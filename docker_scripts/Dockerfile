@@ -51,11 +51,14 @@ ENV CONDA_AUTO_UPDATE_CONDA=false \
     PATH=$HOME/miniconda/bin:$PATH
 COPY --chown=${NAME} environment.yml /app/environment.yml
 
-RUN curl -sLo ~/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-py311_25.1.1-2-Linux-x86_64.sh \
+RUN curl -sLo ~/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-py313_25.11.1-1-Linux-x86_64.sh \
  && chmod +x ~/miniconda.sh \
  && ~/miniconda.sh -b -p ~/miniconda \
- && rm ~/miniconda.sh \
- && conda env update -n base -f /app/environment.yml \
+ && rm ~/miniconda.sh
+RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+
+RUN conda env update -n base -f /app/environment.yml \
  && rm /app/environment.yml \
  && conda clean -ya
  
