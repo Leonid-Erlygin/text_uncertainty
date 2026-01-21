@@ -12,7 +12,7 @@ docker run \
  --gpus '"device=4"' \
  -w="/app" \
  ${USER}_$(basename $(dirname "$PWD")) \
- python3 training/trainers/train.py -cn=text_model_scf \
+ python3 training/trainers/train.py -cn=text_model_clinc150_scf \
  'mode=predict' \
  '~trainer.logger' \
- '+weights_path="/app/outputs/text_scf/yahoo/last.ckpt"'
+ '+weights_path="/app/outputs/text_scf/clinc150/epoch=3-step=468.ckpt"'

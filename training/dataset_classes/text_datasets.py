@@ -13,7 +13,7 @@ class Clinc150Dataset(Dataset):
     def __init__(
         self,
         json_path: str,
-        split: str = "train",
+        split: str = "train",  # "train", "val", or "test"
         label_map: Dict[str, int] = None,
         include_oos: bool = True,
     ):
@@ -21,33 +21,32 @@ class Clinc150Dataset(Dataset):
         Args:
             json_path (str): Path to data_full.json
             split (str): One of "train", "val", "test"
-            label_map (dict): Precomputed mapping from intent name → class index.
-                              If None, built from in-scope intents in this split.
-            include_oos (bool): If False, filter out OOS samples (label == "oos")
+            label_map (dict): Precomputed intent → idx mapping (for in-scope only)
+            include_oos (bool): Whether to include OOS samples in this dataset
         """
         self.json_path = Path(json_path)
         self.split = split
         self.include_oos = include_oos
 
-        # Map split names to JSON keys
-        key_map = {
-            "train": "train",
-            "val": "oos_val",
-            "test": "oos_test",
-        }
-        split_key = key_map[split]
-
         with open(self.json_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        raw_data = data[split_key]  # List of [text, label_str]
+        # Always include in-scope samples for val/test
+        in_scope_key = split  # "val" -> data["val"], etc.
+        in_scope_data = data[in_scope_key]  # List of [text, intent]
+
+        oos_data = []
+        if include_oos and split in ("val", "test"):
+            oos_key = f"oos_{split}"
+            oos_data = data[oos_key]  # List of [text, "oos"]
+
+        # Combine
+        combined_data = in_scope_data + oos_data
 
         texts: List[str] = []
         labels_str: List[str] = []
 
-        for text, label in raw_data:
-            if not include_oos and label == "oos":
-                continue
+        for text, label in combined_data:
             texts.append(text)
             labels_str.append(label)
 
@@ -55,14 +54,12 @@ class Clinc150Dataset(Dataset):
         if label_map is not None:
             self.label_map = label_map
         else:
-            # Build from in-scope labels only
+            # Extract in-scope labels only
             in_scope_labels = [lbl for lbl in labels_str if lbl != "oos"]
             unique_labels = sorted(set(in_scope_labels))
             self.label_map = {lbl: idx for idx, lbl in enumerate(unique_labels)}
 
         self.num_classes = len(self.label_map)
-
-        # Store raw data
         self.texts = texts
         self.labels_str = labels_str
 
@@ -88,6 +85,7 @@ class Clinc150DataModule(pl.LightningDataModule):
         num_workers: int = 4,
         tokenizer_name: str = "bert-base-uncased",
         max_length: int = 64,
+        predict_on_split: str = "test",
     ):
         super().__init__()
         self.json_path = json_path
@@ -95,6 +93,7 @@ class Clinc150DataModule(pl.LightningDataModule):
         self.num_workers = num_workers
         self.tokenizer_name = tokenizer_name
         self.max_length = max_length
+        self.predict_on_split = predict_on_split
 
         # Tokenizer will be initialized in setup (main process)
         self.tokenizer = None
@@ -117,20 +116,42 @@ class Clinc150DataModule(pl.LightningDataModule):
             label_map=self.label_map,
             include_oos=False,
         )
-
-        # Validation and test: include OOS (for evaluation)
-        self.val_dataset = Clinc150Dataset(
-            self.json_path,
-            split="val",
-            label_map=self.label_map,
-            include_oos=True,
-        )
         self.test_dataset = Clinc150Dataset(
             self.json_path,
             split="test",
             label_map=self.label_map,
             include_oos=True,
         )
+
+
+        # Validation and test: include OOS (for evaluation)
+        with open(self.json_path) as f:
+            data = json.load(f)
+
+        val_texts = []
+        val_labels = []
+
+        # Add in-scope val
+        for text, lbl in data["val"]:
+            val_texts.append(text)
+            val_labels.append(lbl)
+
+        # Add OOS val
+        for text, lbl in data["oos_val"]:
+            val_texts.append(text)
+            val_labels.append(lbl)
+
+        # Add OOS train (for better OOS coverage in calibration)
+        for text, lbl in data["oos_train"]:
+            val_texts.append(text)
+            val_labels.append(lbl)
+
+        # Then create a custom ListBackedDataset for validation
+        self.val_dataset = ListBackedDataset([
+            {"text": t, "label": self.label_map.get(l, -1)}
+            for t, l in zip(val_texts, val_labels)
+        ])
+
 
     def collate_fn(self, batch: List[Dict[str, Any]]):
         texts = [item["text"] for item in batch]
@@ -175,24 +196,30 @@ class Clinc150DataModule(pl.LightningDataModule):
     #     )
 
     def predict_dataloader(self):
-        val_loader = DataLoader(
-            self.val_dataset,
+        if self.predict_on_split == 'test':
+            ds = self.test_dataset 
+        elif self.predict_on_split == 'val':
+            ds = self.val_dataset
+        elif self.predict_on_split == 'train':
+            ds = self.train_dataset
+        return DataLoader(
+            ds,
             batch_size=self.batch_size,
             shuffle=False,
             drop_last=False,
             num_workers=self.num_workers,
             collate_fn=self.collate_fn,
         )
-        test_loader = DataLoader(
-            self.test_dataset,
-            batch_size=self.batch_size,
-            shuffle=False,
-            drop_last=False,
-            num_workers=self.num_workers,
-            collate_fn=self.collate_fn,
-        )
-        return [val_loader, test_loader]
+        
+class ListBackedDataset(Dataset):
+    def __init__(self, data_list):
+        self.data = data_list
 
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx]
 
 class TextDatasets(pl.LightningDataModule):
     def __init__(
