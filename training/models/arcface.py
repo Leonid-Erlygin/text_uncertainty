@@ -182,8 +182,8 @@ class MetricLearningModel(LightningModule):
         self.log(
             "train_acc",
             acc,
-            on_step=False,
-            on_epoch=True,
+            on_step=True,
+            on_epoch=False,
             prog_bar=True,
             sync_dist=True,
         )

@@ -20,31 +20,35 @@ class PANAuthorshipDataset(Dataset):
         min_docs_per_author: int = 5,
         split_authors: Optional[List[str]] = None,
         split_type: str = "train",
+        docs_by_author = None,
     ):
         self.jsonl_path = Path(jsonl_path)
         self.split_type = split_type
         
         # Convert verification pairs → true identification format
-        docs_by_author = self._convert_to_identification_format(jsonl_path)
+        if docs_by_author is None:
+            self.docs_by_author = self._convert_to_identification_format(jsonl_path)
+            # Filter sparse authors (critical for stable ArcFace training)
+            if min_docs_per_author > 0:
+                self.docs_by_author = {
+                    a: docs for a, docs in self.docs_by_author.items() 
+                    if len(docs) >= min_docs_per_author
+                }
+        else:
+            self.docs_by_author = docs_by_author
         
-        # Filter sparse authors (critical for stable ArcFace training)
-        if min_docs_per_author > 0:
-            docs_by_author = {
-                a: docs for a, docs in docs_by_author.items() 
-                if len(docs) >= min_docs_per_author
-            }
-        
+
         # Apply author-level split constraint (enforces OSR integrity)
         if split_authors is not None:
-            docs_by_author = {
-                a: docs for a, docs in docs_by_author.items() 
+            self.docs_by_author = {
+                a: docs for a, docs in self.docs_by_author.items() 
                 if a in split_authors
             }
         
         # Build flat lists
         self.texts: List[str] = []
         self.authors: List[str] = []
-        for author, docs in docs_by_author.items():
+        for author, docs in self.docs_by_author.items():
             for doc in docs:
                 self.texts.append(doc["text"])
                 self.authors.append(author)
@@ -173,6 +177,7 @@ class PANDataModule(pl.LightningDataModule):
             min_docs_per_author=self.min_docs_per_author,
             split_type="full"
         )
+        docs_by_author = full_dataset.docs_by_author
         all_authors = list(full_dataset.author_to_idx.keys())
         random.seed(42)
         random.shuffle(all_authors)
@@ -200,6 +205,7 @@ class PANDataModule(pl.LightningDataModule):
             min_docs_per_author=self.min_docs_per_author,
             split_authors=self.train_author_list,
             split_type="train",
+            docs_by_author = docs_by_author,
         )
         
         self.val_dataset = PANAuthorshipDataset(
@@ -208,22 +214,23 @@ class PANDataModule(pl.LightningDataModule):
             min_docs_per_author=self.min_docs_per_author,
             split_authors=self.val_probe_authors_list,
             split_type="val",
+            docs_by_author = docs_by_author,
         )
         
         # Test dataset: use official unseen-authors split (all authors should be unseen → label=-1)
-        self.test_dataset = PANAuthorshipDataset(
-            self.test_jsonl,
-            author_to_idx=self.author_to_idx,
-            min_docs_per_author=self.min_docs_per_author,
-            split_type="test",
-        )
+        # self.test_dataset = PANAuthorshipDataset(
+        #     self.test_jsonl,
+        #     author_to_idx=self.author_to_idx,
+        #     min_docs_per_author=self.min_docs_per_author,
+        #     split_type="test",
+        # )
         
         print(f"\n✓ Train authors: {len(self.train_author_list)} → {len(self.train_dataset)} docs")
         print(f"✓ Val gallery authors: {len(self.val_gallery_authors_list)}")
         print(f"✓ Val probe authors: {len(self.val_probe_authors_list)} "
               f"({len(val_in_gallery)} in-gallery, {len(val_out_gallery)} out-of-gallery)")
-        print(f"✓ Test authors (should be unseen): {self.test_dataset.num_classes} "
-              f"→ {len(self.test_dataset)} docs (all mapped to label=-1)")
+        # print(f"✓ Test authors (should be unseen): {self.test_dataset.num_classes} "
+        #       f"→ {len(self.test_dataset)} docs (all mapped to label=-1)")
 
     def collate_fn(self, batch: List[Dict[str, Any]]):
         texts = [item["text"] for item in batch]
@@ -257,27 +264,27 @@ class PANDataModule(pl.LightningDataModule):
             pin_memory=True,
         )
 
-    def val_dataloader(self):
-        return DataLoader(
-            self.val_dataset,
-            batch_size=self.batch_size * 2,
-            shuffle=False,
-            drop_last=False,
-            num_workers=self.num_workers,
-            collate_fn=self.collate_fn,
-            pin_memory=True,
-        )
+    # def val_dataloader(self):
+    #     return DataLoader(
+    #         self.val_dataset,
+    #         batch_size=self.batch_size * 2,
+    #         shuffle=False,
+    #         drop_last=False,
+    #         num_workers=self.num_workers,
+    #         collate_fn=self.collate_fn,
+    #         pin_memory=True,
+    #     )
 
-    def test_dataloader(self):
-        return DataLoader(
-            self.test_dataset,
-            batch_size=self.batch_size * 2,
-            shuffle=False,
-            drop_last=False,
-            num_workers=self.num_workers,
-            collate_fn=self.collate_fn,
-            pin_memory=True,
-        )
+    # def test_dataloader(self):
+    #     return DataLoader(
+    #         self.test_dataset,
+    #         batch_size=self.batch_size * 2,
+    #         shuffle=False,
+    #         drop_last=False,
+    #         num_workers=self.num_workers,
+    #         collate_fn=self.collate_fn,
+    #         pin_memory=True,
+    #     )
 
     def predict_dataloader(self):
         return self.test_dataloader()

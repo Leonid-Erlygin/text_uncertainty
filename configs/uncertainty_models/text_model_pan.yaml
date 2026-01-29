@@ -8,24 +8,17 @@ trainer:
     experiment_name: "PAN Authorship Recognition"
     run_name: "bert-arcface-pan-xl"
   callbacks:
-    - _target_: pytorch_lightning.callbacks.ModelCheckpoint
-      monitor: "val_loss"
-      mode: "min"
-      save_top_k: 3
-      dirpath: "outputs/pan_bert_arcface"
-      filename: "epoch={epoch:02d}-val_loss={val_loss:.4f}"
-      save_last: True
-    - _target_: pytorch_lightning.callbacks.LearningRateMonitor
-      logging_interval: "step"
-    - _target_: pytorch_lightning.callbacks.EarlyStopping
-      monitor: "val_loss"
-      patience: 3
-      mode: "min"
+  - _target_: pytorch_lightning.callbacks.ModelCheckpoint 
+    every_n_epochs: 1
+    dirpath: outputs/bert_arcface_pan
+    save_last: True
+  - _target_: pytorch_lightning.callbacks.LearningRateMonitor
+    logging_interval: "step"
   max_epochs: 4
   accelerator: gpu
   devices: 1
   num_sanity_val_steps: 0
-  log_every_n_steps: 10
+  log_every_n_steps: 3
   default_root_dir: "outputs/pan_bert_arcface"
   enable_checkpointing: true
 
@@ -35,13 +28,13 @@ model:
     _target_: training.models.lightning_wrappers.BERTEmbedder
     model_name: "bert-base-uncased"
     num_features: 768
-    bottleneck_dim: 768
+    bottleneck_dim: 4096
     freeze_projection: False
-    freeze_backbone: False  # Fine-tune BERT for authorship style
+    freeze_backbone: True  # Fine-tune BERT for authorship style
   loss:
     _target_: training.models.losses.ArcFaceLoss
     s: 4  # Higher scale for text (vs face)
-  num_labels: 15000  # Will be overridden by datamodule.train_dataset.num_classes
+  num_labels: 1000  # Will be overridden by datamodule.train_dataset.num_classes
   num_features: 768
   optimizer_params:
     optimizer_path: torch.optim
@@ -52,9 +45,9 @@ model:
   scheduler_params:
     scheduler: OneCycleLR
     params:
-      max_lr: 1e-3
+      max_lr: 1e-2
       epochs: 4
-      steps_per_epoch: 1135  # Will be auto-calculated by PL
+      steps_per_epoch: 40  # Will be auto-calculated by PL
       div_factor: 1e1
       final_div_factor: 1e2
     interval: step
@@ -64,10 +57,10 @@ data:
   train_jsonl: "/app/datasets/pan/unseen_authors/xl/pan20-av-large-notest.jsonl"
   test_jsonl: "/app/datasets/pan/unseen_authors/xl/pan20-av-large-test.jsonl"
   tokenizer_name: "bert-base-uncased"
-  batch_size: 192  # Smaller due to long texts (512 tokens)
+  batch_size: 512  # Smaller due to long texts (512 tokens)
   num_workers: 16
   max_length: 512
-  min_docs_per_author: 5
-  train_authors: 15000
+  min_docs_per_author: 10
+  train_authors: 1000
   val_gallery_authors: 2000
   val_probe_authors: 2000
