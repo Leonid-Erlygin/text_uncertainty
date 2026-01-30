@@ -145,9 +145,11 @@ class PANDataModule(pl.LightningDataModule):
         tokenizer_name: str = "bert-base-uncased",
         max_length: int = 512,
         min_docs_per_author: int = 5,
-        train_authors: int = 15000,
-        val_gallery_authors: int = 2000,
-        val_probe_authors: int = 2000,
+        train_authors: int = 1000,
+        val_authors: int = 1000,
+        val_probe_authors: int = 1000,
+        test_gallery_authors = 500,
+        test_probe_authors = 1000,
     ):
         super().__init__()
         self.train_jsonl = train_jsonl
@@ -158,13 +160,13 @@ class PANDataModule(pl.LightningDataModule):
         self.max_length = max_length
         self.min_docs_per_author = min_docs_per_author
         self.train_authors = train_authors
-        self.val_gallery_authors = val_gallery_authors
+        self.val_authors = val_authors
         self.val_probe_authors = val_probe_authors
-        
+        self.test_probe_authors = test_probe_authors 
         self.tokenizer = None
         self.author_to_idx: Optional[Dict[str, int]] = None
         self.train_author_list: List[str] = []
-        self.val_gallery_authors_list: List[str] = []
+        self.val_authors_list: List[str] = []
         self.val_probe_authors_list: List[str] = []
 
     def setup(self, stage: Optional[str] = None):
@@ -184,16 +186,12 @@ class PANDataModule(pl.LightningDataModule):
         
         # Step 2: Author-level splitting (CRITICAL for OSR integrity)
         self.train_author_list = all_authors[:self.train_authors]
-        self.val_gallery_authors_list = all_authors[
-            self.train_authors : self.train_authors + self.val_gallery_authors
+        self.val_authors_list = all_authors[
+            self.train_authors : self.train_authors + self.val_authors
         ]
         # Val probes: 50% in-gallery, 50% out-of-gallery
-        val_in_gallery = self.val_gallery_authors_list[:self.val_probe_authors // 2]
-        val_out_gallery = all_authors[
-            self.train_authors + self.val_gallery_authors : 
-            self.train_authors + self.val_gallery_authors + self.val_probe_authors // 2
-        ]
-        self.val_probe_authors_list = val_in_gallery + val_out_gallery
+        self.val_in_gallery = self.val_authors_list[:self.val_probe_authors // 2]
+        self.val_out_gallery = self.val_authors_list[self.val_probe_authors // 2:]
         
         # Step 3: Build label map from TRAIN authors only
         self.author_to_idx = {a: i for i, a in enumerate(self.train_author_list)}
@@ -212,25 +210,37 @@ class PANDataModule(pl.LightningDataModule):
             self.train_jsonl,
             author_to_idx=self.author_to_idx,
             min_docs_per_author=self.min_docs_per_author,
-            split_authors=self.val_probe_authors_list,
+            split_authors=self.val_authors_list,
             split_type="val",
             docs_by_author = docs_by_author,
         )
         
         # Test dataset: use official unseen-authors split (all authors should be unseen → label=-1)
-        # self.test_dataset = PANAuthorshipDataset(
-        #     self.test_jsonl,
-        #     author_to_idx=self.author_to_idx,
-        #     min_docs_per_author=self.min_docs_per_author,
-        #     split_type="test",
-        # )
+        full_test_dataset = PANAuthorshipDataset(
+            self.test_jsonl,
+            min_docs_per_author=self.min_docs_per_author,
+            split_type="test",
+        )
+
+        all_authors_test = list(full_test_dataset.author_to_idx.keys())
+        random.seed(42)
+        random.shuffle(all_authors_test)
         
+        # Step 2: Author-level splitting (CRITICAL for OSR integrity)
+        self.test_author_list = all_authors_test[:self.test_probe_authors]
+        self.test_dataset = PANAuthorshipDataset(
+            self.test_jsonl,
+            min_docs_per_author=self.min_docs_per_author,
+            split_authors=self.test_author_list,
+            split_type="test",
+        )
+
         print(f"\n✓ Train authors: {len(self.train_author_list)} → {len(self.train_dataset)} docs")
         print(f"✓ Val gallery authors: {len(self.val_gallery_authors_list)}")
         print(f"✓ Val probe authors: {len(self.val_probe_authors_list)} "
               f"({len(val_in_gallery)} in-gallery, {len(val_out_gallery)} out-of-gallery)")
-        # print(f"✓ Test authors (should be unseen): {self.test_dataset.num_classes} "
-        #       f"→ {len(self.test_dataset)} docs (all mapped to label=-1)")
+        print(f"✓ Test authors (should be unseen): {self.test_dataset.num_classes} "
+              f"→ {len(self.test_dataset)} docs (all mapped to label=-1)")
 
     def collate_fn(self, batch: List[Dict[str, Any]]):
         texts = [item["text"] for item in batch]
