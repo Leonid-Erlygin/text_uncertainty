@@ -9,10 +9,15 @@ docker run \
  --rm \
  --init \
  -v $(dirname "$PWD"):/app \
- --gpus '"device=4"' \
+ --gpus '"device=0"' \
  -w="/app" \
  ${USER}_$(basename $(dirname "$PWD")) \
- python3 training/trainers/train.py -cn=text_model_clinc150_scf \
+ python3 training/trainers/train.py -cn=text_model_pan_scf \
  'mode=predict' \
  '~trainer.logger' \
- '+weights_path="/app/outputs/text_scf/clinc150/epoch=3-step=468.ckpt"'
+ '+weights_path="/app/outputs/text_scf/pan/epoch=7-step=320.ckpt"'
+
+#  python3 training/trainers/train.py -cn=text_model_clinc150_scf \
+#  'mode=predict' \
+#  '~trainer.logger' \
+#  '+weights_path="/app/outputs/text_scf/clinc150/epoch=3-step=468.ckpt"'

@@ -184,17 +184,6 @@ class Clinc150DataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
             collate_fn=self.collate_fn,
         )
-
-    # def val_dataloader(self):
-    #     return DataLoader(
-    #         self.val_dataset,
-    #         batch_size=self.batch_size,
-    #         shuffle=False,
-    #         drop_last=False,
-    #         num_workers=self.num_workers,
-    #         collate_fn=self.collate_fn,
-    #     )
-
     def predict_dataloader(self):
         if self.predict_on_split == 'test':
             ds = self.test_dataset 

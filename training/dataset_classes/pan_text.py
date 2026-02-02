@@ -148,8 +148,9 @@ class PANDataModule(pl.LightningDataModule):
         train_authors: int = 1000,
         val_authors: int = 1000,
         val_probe_authors: int = 1000,
-        test_gallery_authors = 500,
+        test_authors = 1000,
         test_probe_authors = 1000,
+        predict_on_split = "val",
     ):
         super().__init__()
         self.train_jsonl = train_jsonl
@@ -162,12 +163,15 @@ class PANDataModule(pl.LightningDataModule):
         self.train_authors = train_authors
         self.val_authors = val_authors
         self.val_probe_authors = val_probe_authors
-        self.test_probe_authors = test_probe_authors 
+        self.test_authors = test_authors
+        self.test_probe_authors = test_probe_authors
+        self.predict_on_split = predict_on_split
         self.tokenizer = None
         self.author_to_idx: Optional[Dict[str, int]] = None
         self.train_author_list: List[str] = []
         self.val_authors_list: List[str] = []
         self.val_probe_authors_list: List[str] = []
+        
 
     def setup(self, stage: Optional[str] = None):
         # Initialize tokenizer
@@ -227,20 +231,18 @@ class PANDataModule(pl.LightningDataModule):
         random.shuffle(all_authors_test)
         
         # Step 2: Author-level splitting (CRITICAL for OSR integrity)
-        self.test_author_list = all_authors_test[:self.test_probe_authors]
+        self.test_authors_list = all_authors_test[:self.test_authors]
+        self.test_in_gallery = self.test_authors_list[:self.test_probe_authors // 2]
+        self.test_out_gallery = self.test_authors_list[self.test_probe_authors // 2:]
+        
         self.test_dataset = PANAuthorshipDataset(
             self.test_jsonl,
             min_docs_per_author=self.min_docs_per_author,
-            split_authors=self.test_author_list,
+            split_authors=self.test_authors_list,
             split_type="test",
         )
 
-        print(f"\n✓ Train authors: {len(self.train_author_list)} → {len(self.train_dataset)} docs")
-        print(f"✓ Val gallery authors: {len(self.val_gallery_authors_list)}")
-        print(f"✓ Val probe authors: {len(self.val_probe_authors_list)} "
-              f"({len(val_in_gallery)} in-gallery, {len(val_out_gallery)} out-of-gallery)")
-        print(f"✓ Test authors (should be unseen): {self.test_dataset.num_classes} "
-              f"→ {len(self.test_dataset)} docs (all mapped to label=-1)")
+
 
     def collate_fn(self, batch: List[Dict[str, Any]]):
         texts = [item["text"] for item in batch]
@@ -274,27 +276,18 @@ class PANDataModule(pl.LightningDataModule):
             pin_memory=True,
         )
 
-    # def val_dataloader(self):
-    #     return DataLoader(
-    #         self.val_dataset,
-    #         batch_size=self.batch_size * 2,
-    #         shuffle=False,
-    #         drop_last=False,
-    #         num_workers=self.num_workers,
-    #         collate_fn=self.collate_fn,
-    #         pin_memory=True,
-    #     )
-
-    # def test_dataloader(self):
-    #     return DataLoader(
-    #         self.test_dataset,
-    #         batch_size=self.batch_size * 2,
-    #         shuffle=False,
-    #         drop_last=False,
-    #         num_workers=self.num_workers,
-    #         collate_fn=self.collate_fn,
-    #         pin_memory=True,
-    #     )
-
     def predict_dataloader(self):
-        return self.test_dataloader()
+        if self.predict_on_split == 'test':
+            ds = self.test_dataset 
+        elif self.predict_on_split == 'val':
+            ds = self.val_dataset
+        elif self.predict_on_split == 'train':
+            ds = self.train_dataset
+        return DataLoader(
+            ds,
+            batch_size=self.batch_size,
+            shuffle=False,
+            drop_last=False,
+            num_workers=self.num_workers,
+            collate_fn=self.collate_fn,
+        )
