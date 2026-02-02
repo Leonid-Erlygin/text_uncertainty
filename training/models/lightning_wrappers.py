@@ -57,6 +57,7 @@ class BERTEmbedder(torch.nn.Module):
         model_name: str = "bert-base-uncased",
         num_features: int = 768,  # final embedding dim (on sphere)
         bottleneck_dim: int = 768,  # dim before final projection (often same as num_features)
+        proj_depth: int = 1,  # MLP depth for projection (1 = single linear layer)
         freeze_projection: bool = False,
         freeze_backbone: bool = False,
         backbone_path: str = None,
@@ -66,15 +67,27 @@ class BERTEmbedder(torch.nn.Module):
         self.bottleneck_dim = bottleneck_dim
         self.backbone = AutoModel.from_pretrained(model_name)
 
-        self.proj = nn.Linear(self.backbone.config.hidden_size, bottleneck_dim)
-        self.proj_bn = nn.BatchNorm1d(bottleneck_dim, bottleneck_dim)
+        # Build MLP projection with configurable depth (minimal change)
+        if proj_depth == 1:
+            self.proj = nn.Linear(self.backbone.config.hidden_size, bottleneck_dim)
+        else:
+            layers = []
+            in_dim = self.backbone.config.hidden_size
+            for i in range(proj_depth - 1):
+                layers.append(nn.Linear(in_dim, bottleneck_dim))
+                layers.append(nn.ReLU())  # Intermediate activations
+                in_dim = bottleneck_dim
+            layers.append(nn.Linear(in_dim, bottleneck_dim))  # Final layer without activation
+            self.proj = nn.Sequential(*layers)
+
+        # Fixed BatchNorm1d signature (was incorrectly passing bottleneck_dim twice)
+        self.proj_bn = nn.BatchNorm1d(bottleneck_dim)
         self.final_proj = nn.Linear(bottleneck_dim, num_features)
         self.relu = nn.PReLU()
 
         # Load fine-tuned backbone if provided
         if backbone_path is not None:
             state_dict = torch.load(backbone_path, map_location="cpu")
-            # But better: your saved dict is already clean (just BERT)
             self.load_state_dict(state_dict, strict=True)
         if freeze_backbone:
             for param in self.backbone.parameters():
@@ -100,7 +113,7 @@ class BERTEmbedder(torch.nn.Module):
         )
 
         # [CLS] token representation: (B, hidden_size)
-        cls_emb = outputs.last_hidden_state[:, 0]  # (B, 768)
+        cls_emb = outputs.last_hidden_state[:, 0]  # (B, hidden_size)
 
         # Bottleneck feature (before final norm/projection)
         bottleneck_feat = self.proj(cls_emb)  # (B, bottleneck_dim)

@@ -5,12 +5,12 @@ trainer:
   _target_: pytorch_lightning.Trainer
   logger:
     _target_: pytorch_lightning.loggers.mlflow.MLFlowLogger
-    experiment_name: "PAN Authorship Recognition"
+    experiment_name: "Blog Authorship Recognition"
     run_name: "bert-arcface-pan-xl"
   callbacks:
   - _target_: pytorch_lightning.callbacks.ModelCheckpoint 
     every_n_epochs: 1
-    dirpath: outputs/bert_arcface_pan
+    dirpath: outputs/bert_arcface_blog
     save_last: True
   - _target_: pytorch_lightning.callbacks.LearningRateMonitor
     logging_interval: "step"
@@ -19,7 +19,7 @@ trainer:
   devices: 1
   num_sanity_val_steps: 0
   log_every_n_steps: 3
-  default_root_dir: "outputs/pan_bert_arcface"
+  default_root_dir: "outputs/blog_bert_arcface"
   enable_checkpointing: true
 
 model:
@@ -48,23 +48,21 @@ model:
     params:
       max_lr: 1e-2
       epochs: 16
-      steps_per_epoch: 24
+      steps_per_epoch: 85
       div_factor: 1e1
       final_div_factor: 1e2
     interval: step
 
 data:
-  _target_: training.dataset_classes.pan_text.PANDataModule
-  train_jsonl: "/app/datasets/pan/unseen_authors/xl/pan20-av-large-notest.jsonl"
-  test_jsonl: "/app/datasets/pan/unseen_authors/xl/pan20-av-large-test.jsonl"
+  _target_: training.dataset_classes.blog_text.BlogAuthorshipDataModule
+  csv_path: "/app/datasets/blog_authorship_corpus/blogtext.csv"
   tokenizer_name: "bert-base-uncased"
-  batch_size: 512 
+  batch_size: 512
   num_workers: 16
   max_length: 512
-  min_docs_per_author: 20  
+  min_docs_per_author: 20
   train_authors: 500
-  val_authors: 1000
+  val_authors: 500
   val_probe_authors: 1000
-  test_authors : 1000
-  test_probe_authors: 1000
+  test_authors: 1000
   predict_on_split: test

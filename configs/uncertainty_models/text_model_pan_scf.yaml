@@ -9,7 +9,7 @@ trainer:
   callbacks:
   - _target_: pytorch_lightning.callbacks.ModelCheckpoint 
     every_n_epochs: 1
-    dirpath: outputs/text_scf/pan
+    dirpath: outputs/text_scf/pan_500
     save_last: True
   - _target_: pytorch_lightning.callbacks.LearningRateMonitor
     logging_interval: "step"
@@ -22,7 +22,7 @@ trainer:
   devices: 1
   num_sanity_val_steps: 0
   log_every_n_steps: 3
-  default_root_dir: outputs/text_scf/pan
+  default_root_dir: outputs/text_scf/pan_500
   enable_checkpointing: true
   
 
@@ -32,13 +32,14 @@ model:
         _target_: training.models.lightning_wrappers.BERTEmbedder
         model_name: "bert-base-uncased"
         num_features: 768
-        bottleneck_dim: 4096
+        bottleneck_dim: 2048
         freeze_projection: true
         freeze_backbone: true
-        backbone_path: /app/model_weights/backbone/bert_pan_1000/backbone.pth
+        proj_depth: 2
+        backbone_path: /app/model_weights/backbone/bert_pan_500/backbone.pth
     head:
         _target_: training.models.heads.SCFHead
-        convf_dim: 4096
+        convf_dim: 2048
         latent_vector_size: 512
     scf_loss:
         _target_: training.models.losses.KLDiracVMF
@@ -46,7 +47,7 @@ model:
         radius: 1.
     softmax_weights:
         _target_: training.models.scf.SoftmaxWeights
-        softmax_weights_path: "/app/model_weights/backbone/bert_pan_1000/softmax_weight.pt"
+        softmax_weights_path: "/app/model_weights/backbone/bert_pan_500/softmax_weight.pt"
         radius: 1
     optimizer_params:
         optimizer_path: torch.optim
@@ -58,7 +59,7 @@ model:
         scheduler: OneCycleLR
         params:
           max_lr: 1e-3
-          steps_per_epoch: 40  
+          steps_per_epoch: 24  
           epochs: 8
           div_factor: 10
           final_div_factor: 100
@@ -73,8 +74,8 @@ data:
   batch_size: 512 
   num_workers: 16
   max_length: 512
-  min_docs_per_author: 10  
-  train_authors: 1000
+  min_docs_per_author: 10 # 20 for train    
+  train_authors: 500
   val_authors: 1000
   val_probe_authors: 1000
   test_authors : 1000
