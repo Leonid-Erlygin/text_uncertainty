@@ -179,79 +179,79 @@ class SphereConfidenceFace(LightningModule):
     #         images_batch = images_batch.permute(0, 3, 1, 2)
     #     return self(images_batch)
 
-    def validation_step(self, batch, batch_idx):
-        images, labels = batch
-        if self.permute_batch:
-            images = images.permute(0, 3, 1, 2)
-        features, log_kappa = self(images)
-        self.validation_step_outputs.append([features, log_kappa, labels])
+    # def validation_step(self, batch, batch_idx):
+    #     images, labels = batch
+    #     if self.permute_batch:
+    #         images = images.permute(0, 3, 1, 2)
+    #     features, log_kappa = self(images)
+    #     self.validation_step_outputs.append([features, log_kappa, labels])
 
-    def on_validation_epoch_end(self):
-        image_input_feats = (
-            torch.cat([batch[0] for batch in self.validation_step_outputs], axis=0)
-            .cpu()
-            .numpy()
-        )
-        log_kappa = (
-            torch.cat([batch[1] for batch in self.validation_step_outputs], axis=0)
-            .cpu()
-            .numpy()
-        )
-        labels = (
-            torch.cat([batch[2] for batch in self.validation_step_outputs], axis=0)
-            .cpu()
-            .numpy()
-        )
-        self.validation_step_outputs.clear()
-        kappa = np.exp(log_kappa)
+    # def on_validation_epoch_end(self):
+    #     image_input_feats = (
+    #         torch.cat([batch[0] for batch in self.validation_step_outputs], axis=0)
+    #         .cpu()
+    #         .numpy()
+    #     )
+    #     log_kappa = (
+    #         torch.cat([batch[1] for batch in self.validation_step_outputs], axis=0)
+    #         .cpu()
+    #         .numpy()
+    #     )
+    #     labels = (
+    #         torch.cat([batch[2] for batch in self.validation_step_outputs], axis=0)
+    #         .cpu()
+    #         .numpy()
+    #     )
+    #     self.validation_step_outputs.clear()
+    #     kappa = np.exp(log_kappa)
 
-        unc_indexes = np.argsort(-kappa[:, 0])
-        fractions = [0, 0.5, 10]
-        fractions_linspace = np.linspace(fractions[0], fractions[1], fractions[2])
-        accuracies = []
-        weights = F.normalize(self.softmax_weights, p=2, dim=1).detach().cpu().numpy()
-        for fraction in fractions_linspace:
-            good_idx = unc_indexes[: int((1 - fraction) * kappa.shape[0])]
-            good_feat = image_input_feats[good_idx]
-            good_labels = labels[good_idx]
-            predictions = np.argmax(good_feat @ weights.T, axis=-1)
-            accuracy = np.mean(predictions == good_labels)
-            accuracies.append(accuracy)
-        unc_auc_pr = np.mean(accuracies) * fractions[-2]
+    #     unc_indexes = np.argsort(-kappa[:, 0])
+    #     fractions = [0, 0.5, 10]
+    #     fractions_linspace = np.linspace(fractions[0], fractions[1], fractions[2])
+    #     accuracies = []
+    #     weights = F.normalize(self.softmax_weights, p=2, dim=1).detach().cpu().numpy()
+    #     for fraction in fractions_linspace:
+    #         good_idx = unc_indexes[: int((1 - fraction) * kappa.shape[0])]
+    #         good_feat = image_input_feats[good_idx]
+    #         good_labels = labels[good_idx]
+    #         predictions = np.argmax(good_feat @ weights.T, axis=-1)
+    #         accuracy = np.mean(predictions == good_labels)
+    #         accuracies.append(accuracy)
+    #     unc_auc_pr = np.mean(accuracies) * fractions[-2]
 
-        # random
-        unc_indexes = np.arange(kappa.shape[0])
-        rng = np.random.default_rng(1)
-        rng.shuffle(unc_indexes)
-        accuracies_random = []
-        for fraction in fractions_linspace:
-            good_idx = unc_indexes[: int((1 - fraction) * kappa.shape[0])]
-            good_feat = image_input_feats[good_idx]
-            good_labels = labels[good_idx]
-            predictions = np.argmax(good_feat @ weights.T, axis=-1)
-            accuracy = np.mean(predictions == good_labels)
-            accuracies_random.append(accuracy)
-        random_auc_pr = np.mean(accuracies_random) * fractions[-2]
+    #     # random
+    #     unc_indexes = np.arange(kappa.shape[0])
+    #     rng = np.random.default_rng(1)
+    #     rng.shuffle(unc_indexes)
+    #     accuracies_random = []
+    #     for fraction in fractions_linspace:
+    #         good_idx = unc_indexes[: int((1 - fraction) * kappa.shape[0])]
+    #         good_feat = image_input_feats[good_idx]
+    #         good_labels = labels[good_idx]
+    #         predictions = np.argmax(good_feat @ weights.T, axis=-1)
+    #         accuracy = np.mean(predictions == good_labels)
+    #         accuracies_random.append(accuracy)
+    #     random_auc_pr = np.mean(accuracies_random) * fractions[-2]
 
-        # oracle
+    #     # oracle
 
-        unc_oracle = np.zeros(kappa.shape[0])
-        predictions = np.argmax(image_input_feats @ weights.T, axis=-1)
-        errors = predictions != labels
-        unc_oracle[errors] = 1
-        unc_indexes = np.argsort(unc_oracle)
-        accuracies_oracle = []
-        for fraction in fractions_linspace:
-            good_idx = unc_indexes[: int((1 - fraction) * kappa.shape[0])]
-            good_feat = image_input_feats[good_idx]
-            good_labels = labels[good_idx]
-            predictions = np.argmax(good_feat @ weights.T, axis=-1)
-            accuracy = np.mean(predictions == good_labels)
-            accuracies_oracle.append(accuracy)
-        oracle_auc_pr = np.mean(accuracies_oracle) * fractions[-2]
+    #     unc_oracle = np.zeros(kappa.shape[0])
+    #     predictions = np.argmax(image_input_feats @ weights.T, axis=-1)
+    #     errors = predictions != labels
+    #     unc_oracle[errors] = 1
+    #     unc_indexes = np.argsort(unc_oracle)
+    #     accuracies_oracle = []
+    #     for fraction in fractions_linspace:
+    #         good_idx = unc_indexes[: int((1 - fraction) * kappa.shape[0])]
+    #         good_feat = image_input_feats[good_idx]
+    #         good_labels = labels[good_idx]
+    #         predictions = np.argmax(good_feat @ weights.T, axis=-1)
+    #         accuracy = np.mean(predictions == good_labels)
+    #         accuracies_oracle.append(accuracy)
+    #     oracle_auc_pr = np.mean(accuracies_oracle) * fractions[-2]
 
-        self.log("random auc", random_auc_pr)
-        self.log("oracle auc", oracle_auc_pr)
-        self.log("unc auc", unc_auc_pr)
+    #     self.log("random auc", random_auc_pr)
+    #     self.log("oracle auc", oracle_auc_pr)
+    #     self.log("unc auc", unc_auc_pr)
 
-        self.log("PPR", (unc_auc_pr - random_auc_pr) / (oracle_auc_pr - random_auc_pr))
+    #     self.log("PPR", (unc_auc_pr - random_auc_pr) / (oracle_auc_pr - random_auc_pr))

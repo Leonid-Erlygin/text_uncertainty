@@ -6,20 +6,21 @@ trainer:
   logger:
     _target_: pytorch_lightning.loggers.mlflow.MLFlowLogger
     experiment_name: "PAN Authorship Recognition"
-    run_name: "bert-arcface-pan-xl"
+    run_name: "bert-arcface-pan-xl 4000k"
   callbacks:
   - _target_: pytorch_lightning.callbacks.ModelCheckpoint 
     every_n_epochs: 1
-    dirpath: outputs/bert_arcface_pan
+    dirpath: outputs/bert_arcface_pan_4k
     save_last: True
   - _target_: pytorch_lightning.callbacks.LearningRateMonitor
     logging_interval: "step"
-  max_epochs: 16
+  max_epochs: 8
   accelerator: gpu
   devices: 1
-  num_sanity_val_steps: 0
+  num_sanity_val_steps: 1
+  check_val_every_n_epoch: 1
   log_every_n_steps: 3
-  default_root_dir: "outputs/pan_bert_arcface"
+  default_root_dir: "outputs/pan_bert_arcface_4k"
   enable_checkpointing: true
 
 model:
@@ -35,7 +36,7 @@ model:
   loss:
     _target_: training.models.losses.ArcFaceLoss
     s: 4  # Higher scale for text (vs face)
-  num_labels: 500  # Will be overridden by datamodule.train_dataset.num_classes
+  num_labels: 4000  # Will be overridden by datamodule.train_dataset.num_classes
   num_features: 768
   optimizer_params:
     optimizer_path: torch.optim
@@ -47,8 +48,8 @@ model:
     scheduler: OneCycleLR
     params:
       max_lr: 1e-2
-      epochs: 16
-      steps_per_epoch: 24
+      epochs: 8
+      steps_per_epoch: 162
       div_factor: 1e1
       final_div_factor: 1e2
     interval: step
@@ -61,8 +62,8 @@ data:
   batch_size: 512 
   num_workers: 16
   max_length: 512
-  min_docs_per_author: 20  
-  train_authors: 500
+  min_docs_per_author: 10  
+  train_authors: 4000
   val_authors: 1000
   val_probe_authors: 1000
   test_authors : 1000

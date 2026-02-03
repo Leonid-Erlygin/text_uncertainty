@@ -242,10 +242,11 @@ class PANDataModule(pl.LightningDataModule):
             max_length=self.max_length,
             return_tensors="pt",
         )
-
+        author_ids = [item["author_id"] for item in batch]
         input_dict = {
             "input_ids": tokenized["input_ids"],
             "attention_mask": tokenized["attention_mask"],
+            "author_ids": author_ids
         }
 
         if "label" in batch[0]:
@@ -257,6 +258,16 @@ class PANDataModule(pl.LightningDataModule):
     def train_dataloader(self):
         return DataLoader(
             self.train_dataset,
+            batch_size=self.batch_size,
+            shuffle=True,
+            drop_last=True,
+            num_workers=self.num_workers,
+            collate_fn=self.collate_fn,
+            pin_memory=True,
+        )
+    def val_dataloader(self):
+        return DataLoader(
+            self.val_dataset,
             batch_size=self.batch_size,
             shuffle=True,
             drop_last=True,

@@ -12,4 +12,4 @@ docker run \
  --gpus '"device=2"' \
  -w="/app" \
  ${USER}_$(basename $(dirname "$PWD")) \
- python3 training/trainers/train.py -cn=text_model_blog #-cn=text_model_pan #-cn=text_model_clinc150 #-cn=text_model
+ python3 training/trainers/train.py -cn=text_model_pan #-cn=text_model_blog # #-cn=text_model_clinc150 #-cn=text_model

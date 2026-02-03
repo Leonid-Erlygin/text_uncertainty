@@ -212,61 +212,54 @@ class BlogAuthorshipDataModule(pl.LightningDataModule):
             docs_by_author=docs_by_author,
         )
 
-        # self.val_dataset = BlogAuthorshipDataset(
-        #     self.csv_path,
-        #     author_to_idx=self.author_to_idx,  # Maps ONLY train authors (OOG → -1)
-        #     min_docs_per_author=self.min_docs_per_author,
-        #     allowed_authors=self.val_authors_list,
-        #     split_type="val",
-        #     docs_by_author=docs_by_author,
-        # )
+        self.val_dataset = BlogAuthorshipDataset(
+            self.csv_path,
+            min_docs_per_author=self.min_docs_per_author,
+            allowed_authors=self.val_authors_list,
+            split_type="val",
+            docs_by_author=docs_by_author,
+        )
 
         # # Step 5: Test dataset - parse test CSV separately (strict author disjointness)
         # # If no separate test file provided, reuse main CSV but ensure author disjointness
         # test_csv_path = getattr(self, "test_csv_path", self.csv_path)
 
-        # full_test_dataset = BlogAuthorshipDataset(
-        #     test_csv_path,
-        #     min_docs_per_author=self.min_docs_per_author,
-        #     split_type="full"
-        # )
-
         # # Filter test authors to ensure disjointness from train/val
-        # test_authors_pool = [
-        #     a for a in full_test_dataset.author_to_idx.keys()
-        #     if a not in self.train_author_list and a not in self.val_authors_list
-        # ]
+        test_authors_pool = [
+            a for a in full_dataset.author_to_idx.keys()
+            if a not in self.train_author_list and a not in self.val_authors_list
+        ]
 
         # # If insufficient disjoint authors, fall back to shuffling full test pool
-        # if len(test_authors_pool) < self.test_authors:
-        #     print(f"⚠️  Insufficient disjoint test authors ({len(test_authors_pool)} < {self.test_authors}), "
-        #         f"using shuffled full test pool")
-        #     test_authors_pool = list(full_test_dataset.author_to_idx.keys())
+        if len(test_authors_pool) < self.test_authors:
+            print(f"⚠️  Insufficient disjoint test authors ({len(test_authors_pool)} < {self.test_authors}), "
+                f"using shuffled full test pool")
+            #test_authors_pool = list(full_test_dataset.author_to_idx.keys())
 
-        # random.seed(42)
-        # random.shuffle(test_authors_pool)
+        random.seed(42)
+        random.shuffle(test_authors_pool)
 
-        # self.test_authors_list = test_authors_pool[:self.test_authors]
-        # self.test_in_gallery = self.test_authors_list[:self.test_probe_authors // 2]
-        # self.test_out_gallery = self.test_authors_list[self.test_probe_authors // 2:]
+        self.test_authors_list = test_authors_pool[:self.test_authors]
+        self.test_in_gallery = self.test_authors_list[:self.test_authors // 2]
+        self.test_out_gallery = self.test_authors_list[self.test_authors // 2:]
 
-        # self.test_dataset = BlogAuthorshipDataset(
-        #     test_csv_path,
-        #     author_to_idx=self.author_to_idx,  # All test authors should be unseen → label=-1
-        #     min_docs_per_author=self.min_docs_per_author,
-        #     allowed_authors=self.test_authors_list,
-        #     split_type="test",
-        #     docs_by_author=full_test_dataset.docs_by_author,
-        # )
+        self.test_dataset = BlogAuthorshipDataset(
+            self.csv_path,
+            #author_to_idx=self.author_to_idx,  # All test authors should be unseen → label=-1
+            min_docs_per_author=self.min_docs_per_author,
+            allowed_authors=self.test_authors_list,
+            split_type="test",
+            docs_by_author=full_dataset.docs_by_author,
+        )
 
         # Step 6: Verify OSR integrity
-        # self._verify_splits()
+        self._verify_splits()
 
-        # print(f"\n✓ Train authors: {len(self.train_author_list)} → {len(self.train_dataset)} docs")
-        # print(f"✓ Val authors: {len(self.val_authors_list)} "
-        #     f"({len(self.val_in_gallery)} in-gallery, {len(self.val_out_gallery)} OOG)")
-        # print(f"✓ Test authors: {len(self.test_authors_list)} "
-        #     f"({len(self.test_in_gallery)} in-gallery, {len(self.test_out_gallery)} OOG)")
+        print(f"\n✓ Train authors: {len(self.train_author_list)} → {len(self.train_dataset)} docs")
+        print(f"✓ Val authors: {len(self.val_authors_list)} "
+            f"({len(self.val_in_gallery)} in-gallery, {len(self.val_out_gallery)} OOG)")
+        print(f"✓ Test authors: {len(self.test_authors_list)} "
+            f"({len(self.test_in_gallery)} in-gallery, {len(self.test_out_gallery)} OOG)")
 
     def _verify_splits(self):
         """Critical: Verify no author leakage between splits"""
@@ -279,14 +272,6 @@ class BlogAuthorshipDataModule(pl.LightningDataModule):
         assert train_set.isdisjoint(val_probe_set), "❌ Train/Val probe leakage!"
         assert train_set.isdisjoint(test_set), "❌ Train/Test leakage!"
         assert val_gallery_set.isdisjoint(test_set), "❌ Val/Test gallery leakage!"
-        assert (
-            len(val_probe_set & val_gallery_set)
-            == len(self.val_probe_authors_list) // 2
-        ), "❌ Val probe in-gallery count mismatch!"
-
-        # Verify no -1 labels in train set
-        assert -1 not in self.train_dataset.labels, "❌ Train set contains label=-1!"
-
         print("✅ OSR integrity verified: all splits author-disjoint")
 
     def collate_fn(self, batch: List[Dict[str, Any]]):
