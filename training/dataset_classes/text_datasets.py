@@ -77,6 +77,7 @@ class Clinc150Dataset(Dataset):
             "label": label,
         }
 
+
 class Clinc150DataModule(pl.LightningDataModule):
     def __init__(
         self,
@@ -104,9 +105,7 @@ class Clinc150DataModule(pl.LightningDataModule):
         self.tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_name)
 
         # Build label map from full training set (in-scope only)
-        full_train = Clinc150Dataset(
-            self.json_path, split="train", include_oos=False
-        )
+        full_train = Clinc150Dataset(self.json_path, split="train", include_oos=False)
         self.label_map = full_train.label_map
 
         # Training: exclude OOS
@@ -122,7 +121,6 @@ class Clinc150DataModule(pl.LightningDataModule):
             label_map=self.label_map,
             include_oos=True,
         )
-
 
         # Validation and test: include OOS (for evaluation)
         with open(self.json_path) as f:
@@ -147,11 +145,12 @@ class Clinc150DataModule(pl.LightningDataModule):
             val_labels.append(lbl)
 
         # Then create a custom ListBackedDataset for validation
-        self.val_dataset = ListBackedDataset([
-            {"text": t, "label": self.label_map.get(l, -1)}
-            for t, l in zip(val_texts, val_labels)
-        ])
-
+        self.val_dataset = ListBackedDataset(
+            [
+                {"text": t, "label": self.label_map.get(l, -1)}
+                for t, l in zip(val_texts, val_labels)
+            ]
+        )
 
     def collate_fn(self, batch: List[Dict[str, Any]]):
         texts = [item["text"] for item in batch]
@@ -184,12 +183,13 @@ class Clinc150DataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
             collate_fn=self.collate_fn,
         )
+
     def predict_dataloader(self):
-        if self.predict_on_split == 'test':
-            ds = self.test_dataset 
-        elif self.predict_on_split == 'val':
+        if self.predict_on_split == "test":
+            ds = self.test_dataset
+        elif self.predict_on_split == "val":
             ds = self.val_dataset
-        elif self.predict_on_split == 'train':
+        elif self.predict_on_split == "train":
             ds = self.train_dataset
         return DataLoader(
             ds,
@@ -199,7 +199,8 @@ class Clinc150DataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
             collate_fn=self.collate_fn,
         )
-        
+
+
 class ListBackedDataset(Dataset):
     def __init__(self, data_list):
         self.data = data_list
@@ -209,6 +210,7 @@ class ListBackedDataset(Dataset):
 
     def __getitem__(self, idx):
         return self.data[idx]
+
 
 class TextDatasets(pl.LightningDataModule):
     def __init__(

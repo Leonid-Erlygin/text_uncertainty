@@ -77,7 +77,9 @@ class BERTEmbedder(torch.nn.Module):
                 layers.append(nn.Linear(in_dim, bottleneck_dim))
                 layers.append(nn.ReLU())  # Intermediate activations
                 in_dim = bottleneck_dim
-            layers.append(nn.Linear(in_dim, bottleneck_dim))  # Final layer without activation
+            layers.append(
+                nn.Linear(in_dim, bottleneck_dim)
+            )  # Final layer without activation
             self.proj = nn.Sequential(*layers)
 
         # Fixed BatchNorm1d signature (was incorrectly passing bottleneck_dim twice)
