@@ -150,6 +150,7 @@ class ExpTransform(nn.Module):
         self.use_shift = use_shift
         self.use_alpha = use_alpha
         self.use_T = use_T
+        self.name = "exp"
         assert self.use_alpha or self.use_shift or self.use_T
         if self.use_T:
             self.T1 = nn.Parameter(torch.tensor(1.0))
@@ -194,6 +195,7 @@ class MLP(nn.Module):
         layers = []
         prev_dim = 2
         use_bn = use_bn
+        self.name = "MLP"
         for i in range(num_layers):
             new_dim = base_dim * (i + 2) * 4
             layers.extend(
@@ -412,7 +414,7 @@ class NNcalibration:
             # )
             # print(torch.sigmoid(weight).item())
         # draw probs
-        self.draw_dencity_plot(X_norm.cpu(), error_calc, dataset_name, far, is_val=True)
+        self.draw_dencity_plot(X_norm.cpu(), error_calc, dataset_name, far, is_val=True, model_name=self.model.name)
 
     def apply_calibration_transform(self, kl_1, kl_2, error_calc, dataset_name, far):
 
@@ -430,12 +432,12 @@ class NNcalibration:
         self.model.eval()
         predictions_perceptron = self.model(X_norm)
         self.draw_dencity_plot(
-            X_norm.cpu(), error_calc, dataset_name, far, is_val=False
+            X_norm.cpu(), error_calc, dataset_name, far, is_val=False, model_name=self.model.name
         )
         unc = -predictions_perceptron.detach().cpu().numpy()
         return unc
 
-    def draw_dencity_plot(self, X_norm, error_calc, dataset_name, far, is_val):
+    def draw_dencity_plot(self, X_norm, error_calc, dataset_name, far, is_val, model_name):
         true_pred = np.zeros(error_calc.is_seen.shape[0])
         true_pred[error_calc.is_seen] = error_calc.true_accept_true_ident
         true_pred[~error_calc.is_seen] = error_calc.true_reject
@@ -489,17 +491,19 @@ class NNcalibration:
             y="kl_2",
             hue="prediction kind",
             hue_order=hue_order,
-            s=10,
+            s=20,
             alpha=0.5,
+            edgecolor="black",    # Set the border color to black
+            linewidth=1 
         )
         log_dir = (
             Path(self.log_dir) / "calibration_images" / self.val_ds_name / str(far)
         )
         log_dir.mkdir(parents=True, exist_ok=True)
         if is_val:
-            plt.savefig(log_dir / f"val.png")
+            plt.savefig(log_dir / f"val_{model_name}.png", dpi=300)
         else:
-            plt.savefig(log_dir / f"{dataset_name}.png")
+            plt.savefig(log_dir / f"{dataset_name}_{model_name}.png", dpi=300)
 
 
 class Standartization:

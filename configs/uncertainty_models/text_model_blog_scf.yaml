@@ -5,11 +5,11 @@ trainer:
   logger:
     _target_: pytorch_lightning.loggers.mlflow.MLFlowLogger
     experiment_name: "Blog Authorship Recognition"
-    run_name: "bert scf"
+    run_name: "bert scf 4k"
   callbacks:
   - _target_: pytorch_lightning.callbacks.ModelCheckpoint 
     every_n_epochs: 1
-    dirpath: outputs/text_scf/blog_500
+    dirpath: outputs/text_scf/blog_4k
     save_last: True
   - _target_: pytorch_lightning.callbacks.LearningRateMonitor
     logging_interval: "step"
@@ -22,7 +22,7 @@ trainer:
   devices: 1
   num_sanity_val_steps: 0
   log_every_n_steps: 3
-  default_root_dir: outputs/text_scf/blog_500
+  default_root_dir: outputs/text_scf/blog_4k
   enable_checkpointing: true
   
 
@@ -36,7 +36,7 @@ model:
         freeze_projection: true
         freeze_backbone: true
         proj_depth: 2
-        backbone_path: /app/model_weights/backbone/bert_blog/backbone.pth
+        backbone_path: /app/model_weights/backbone/bert_blog_4k/backbone.pth
     head:
         _target_: training.models.heads.SCFHead
         convf_dim: 2048
@@ -47,7 +47,7 @@ model:
         radius: 1.
     softmax_weights:
         _target_: training.models.scf.SoftmaxWeights
-        softmax_weights_path: "/app/model_weights/backbone/bert_blog/softmax_weight.pt"
+        softmax_weights_path: "/app/model_weights/backbone/bert_blog_4k/softmax_weight.pt"
         radius: 1
     optimizer_params:
         optimizer_path: torch.optim
@@ -59,7 +59,7 @@ model:
         scheduler: OneCycleLR
         params:
           max_lr: 1e-3
-          steps_per_epoch: 85  
+          steps_per_epoch: 485  
           epochs: 8
           div_factor: 10
           final_div_factor: 100
@@ -73,9 +73,9 @@ data:
   batch_size: 512
   num_workers: 16
   max_length: 512
-  min_docs_per_author: 20
-  train_authors: 500
-  val_authors: 1000
-  val_probe_authors: 1000
-  test_authors: 1000
+  min_docs_per_author: 10
+  train_authors: 4000
+  val_authors: 200
+  val_probe_authors: 200
+  test_authors: 200
   predict_on_split: test

@@ -76,8 +76,8 @@ data:
   max_length: 512
   min_docs_per_author: 10 # 20 for train    
   train_authors: 4000
-  val_authors: 1000
-  val_probe_authors: 1000
-  test_authors : 1000
-  test_probe_authors: 1000
+  val_authors: 200
+  val_probe_authors: 200
+  test_authors : 200
+  test_probe_authors: 200
   predict_on_split: test
