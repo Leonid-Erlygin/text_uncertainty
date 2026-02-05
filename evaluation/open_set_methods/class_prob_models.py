@@ -174,7 +174,7 @@ class MonteCarloPredictiveProb:
             is_seen = np.isin(probe_unique_ids, g_unique_ids)
             kappa_low = 300
             kappa_high = 150000
-            max_iter = 15
+            max_iter = 20
             eps = 0.0005
             far_loss_func = FarLossCalc(
                 probe_feats,
@@ -239,7 +239,7 @@ class MonteCarloPredictiveProb:
             ]
             kappa_low = 200
             kappa_high = 150000
-            max_iter = 15
+            max_iter = 20
             eps = 0.0005
             far_loss_func_calib = FarLossCalc(
                 probe_feats_calib,
