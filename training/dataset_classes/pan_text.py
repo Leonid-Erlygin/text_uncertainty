@@ -246,7 +246,7 @@ class PANDataModule(pl.LightningDataModule):
         input_dict = {
             "input_ids": tokenized["input_ids"],
             "attention_mask": tokenized["attention_mask"],
-            "author_ids": author_ids
+            "author_ids": author_ids,
         }
 
         if "label" in batch[0]:
@@ -265,6 +265,7 @@ class PANDataModule(pl.LightningDataModule):
             collate_fn=self.collate_fn,
             pin_memory=True,
         )
+
     def val_dataloader(self):
         return DataLoader(
             self.val_dataset,

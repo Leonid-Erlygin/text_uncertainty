@@ -206,57 +206,63 @@ class MetricLearningModel(LightningModule):
     def validation_step(self, batch, batch_idx):
         # For val set with unseen authors: labels will be -1, but we need author_id metadata
         images, labels = batch
-        
+
         # Forward pass
         features, logits = self(images)
         # loss = self.loss(logits, labels)
         # self.log("val_loss", loss, prog_bar=True)
-        
+
         # CRITICAL: Store embeddings + author IDs for verification metrics
         # Assumes your dataloader's collate_fn passes author_id through batch metadata
         # If not, modify collate_fn to include author_id in batch dict
-        self.validation_step_outputs.append({
-            "embeddings": features.detach().cpu(),
-            "author_ids": images["author_ids"],  # See note below
-            "labels": labels.detach().cpu(),
-        })
-        
+        self.validation_step_outputs.append(
+            {
+                "embeddings": features.detach().cpu(),
+                "author_ids": images["author_ids"],  # See note below
+                "labels": labels.detach().cpu(),
+            }
+        )
+
         # return loss
 
     def on_validation_epoch_end(self):
         # Aggregate embeddings and author IDs
         all_embeddings = []
         all_author_ids = []
-        
+
         for batch_out in self.validation_step_outputs:
             all_embeddings.append(batch_out["embeddings"])
             all_author_ids.extend(batch_out["author_ids"])  # List of strings
-        
+
         embeddings = torch.cat(all_embeddings, dim=0).numpy()  # (N, D)
         author_ids = np.array(all_author_ids)  # (N,)
-        
+
         # Build author → indices mapping
         author_to_indices = defaultdict(list)
         for idx, author in enumerate(author_ids):
             author_to_indices[author].append(idx)
-        
+
         # Sample verification pairs (efficient: ~2K pairs total)
         pos_pairs = []
         neg_pairs = []
-        
+
         # Positive pairs: sample 2 docs from same author
-        authors_with_multiple = [a for a, idxs in author_to_indices.items() if len(idxs) >= 2]
+        authors_with_multiple = [
+            a for a, idxs in author_to_indices.items() if len(idxs) >= 2
+        ]
         sampled_authors = random.sample(
-            authors_with_multiple, 
-            min(500, len(authors_with_multiple))  # 500 authors → ~500 pos pairs
+            authors_with_multiple,
+            min(500, len(authors_with_multiple)),  # 500 authors → ~500 pos pairs
         )
-        
+
         for author in sampled_authors:
             idxs = author_to_indices[author]
             i, j = random.sample(idxs, 2)
-            sim = np.dot(embeddings[i], embeddings[j])  # Cosine (embeddings are L2-normalized)
+            sim = np.dot(
+                embeddings[i], embeddings[j]
+            )  # Cosine (embeddings are L2-normalized)
             pos_pairs.append(sim)
-        
+
         # Negative pairs: sample docs from different authors
         all_authors = list(author_to_indices.keys())
         for _ in range(len(pos_pairs)):  # Match pos pair count
@@ -265,16 +271,16 @@ class MetricLearningModel(LightningModule):
             j = random.choice(author_to_indices[a2])
             sim = np.dot(embeddings[i], embeddings[j])
             neg_pairs.append(sim)
-        
+
         # Compute ROCAUC
         scores = np.array(pos_pairs + neg_pairs)
         labels = np.array([1] * len(pos_pairs) + [0] * len(neg_pairs))
-        
+
         try:
             roc_auc = roc_auc_score(labels, scores)
         except ValueError:
             roc_auc = 0.5  # Degenerate case (all scores identical)
-        
+
         # Also compute TAR@FAR=0.01 (more interpretable for authorship)
         sorted_idx = np.argsort(-scores)  # Descending
         sorted_labels = labels[sorted_idx]
@@ -283,13 +289,13 @@ class MetricLearningModel(LightningModule):
             tar_far01 = sorted_labels[:far_threshold_idx].mean()
         else:
             tar_far01 = 0.0
-        
+
         # Log metrics
         self.log("val_verif_rocauc", roc_auc, prog_bar=True)
         self.log("val_verif_tar_far0.01", tar_far01, prog_bar=False)
         self.log("val_verif_pos_mean", np.mean(pos_pairs), prog_bar=False)
         self.log("val_verif_neg_mean", np.mean(neg_pairs), prog_bar=False)
-        
+
         # Clear outputs
         self.validation_step_outputs.clear()
 

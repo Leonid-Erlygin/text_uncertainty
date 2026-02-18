@@ -64,3 +64,4 @@ dependencies:
     - "black[jupyter]"            # if needed
     - "dask[array]"               # usually not needed if conda dask installed
     - "optuna-integration[pytorch_lightning]"  # if conda doesn't provide it
+    - kaleido

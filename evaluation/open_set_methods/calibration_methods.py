@@ -414,7 +414,14 @@ class NNcalibration:
             # )
             # print(torch.sigmoid(weight).item())
         # draw probs
-        self.draw_dencity_plot(X_norm.cpu(), error_calc, dataset_name, far, is_val=True, model_name=self.model.name)
+        self.draw_dencity_plot(
+            X_norm.cpu(),
+            error_calc,
+            dataset_name,
+            far,
+            is_val=True,
+            model_name=self.model.name,
+        )
 
     def apply_calibration_transform(self, kl_1, kl_2, error_calc, dataset_name, far):
 
@@ -432,12 +439,19 @@ class NNcalibration:
         self.model.eval()
         predictions_perceptron = self.model(X_norm)
         self.draw_dencity_plot(
-            X_norm.cpu(), error_calc, dataset_name, far, is_val=False, model_name=self.model.name
+            X_norm.cpu(),
+            error_calc,
+            dataset_name,
+            far,
+            is_val=False,
+            model_name=self.model.name,
         )
         unc = -predictions_perceptron.detach().cpu().numpy()
         return unc
 
-    def draw_dencity_plot(self, X_norm, error_calc, dataset_name, far, is_val, model_name):
+    def draw_dencity_plot(
+        self, X_norm, error_calc, dataset_name, far, is_val, model_name
+    ):
         true_pred = np.zeros(error_calc.is_seen.shape[0])
         true_pred[error_calc.is_seen] = error_calc.true_accept_true_ident
         true_pred[~error_calc.is_seen] = error_calc.true_reject
@@ -493,8 +507,8 @@ class NNcalibration:
             hue_order=hue_order,
             s=20,
             alpha=0.5,
-            edgecolor="black",    # Set the border color to black
-            linewidth=1 
+            edgecolor="black",  # Set the border color to black
+            linewidth=1,
         )
         log_dir = (
             Path(self.log_dir) / "calibration_images" / self.val_ds_name / str(far)
