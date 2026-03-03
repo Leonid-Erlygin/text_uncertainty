@@ -240,7 +240,11 @@ class TextDatasets(pl.LightningDataModule):
         texts = [item["text"] for item in batch]
 
         tokenized = self.tokenizer(
-            texts, padding=True, truncation=True, max_length=self.max_length, return_tensors="pt"
+            texts,
+            padding=True,
+            truncation=True,
+            max_length=self.max_length,
+            return_tensors="pt",
         )
 
         tokenized_inputs = {
@@ -318,7 +322,9 @@ class TextPredictionDataset(Dataset):
     ):
         root_dir = Path(root_dir)
         paths = []
-        with open(root_dir / "meta" / f"{root_dir.parts[-1]}_face_tid_mid.txt") as fd:
+        with open(
+            root_dir / "meta" / f"{root_dir.parts[-1].split('-')[0]}_face_tid_mid.txt"
+        ) as fd:
             for line in fd:
                 paths.append(line.split(" ")[0])
         self.texts = []
