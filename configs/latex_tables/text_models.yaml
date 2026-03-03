@@ -12,15 +12,20 @@ defaults:
   - meta_data@metric_order: metric_order
 
 
-datasets: ["yahoo_answers"] # ["IJBC", "IJBB"] #, "whale", "large_12k-perspk5"]
+datasets: ["clinc150"] #["pan"] #["yahoo_answers"] # ["IJBC", "IJBB"] #, "whale", "large_12k-perspk5"]
 
 task: filter
 
 # CHANGE
-metric_table_path: /app/outputs/experiments/osr_text/open_set_identification/{dataset}/filter_tabels/f1_class_prr_filtering.csv
+#metric_table_path: /app/outputs/experiments/osr_pan/open_set_identification/pan_test/filter_tabels/f1_class_prr_filtering.csv #/app/outputs/experiments/osr_text/open_set_identification/{dataset}/filter_tabels/f1_class_prr_filtering.csv
+metric_table_path: /app/outputs/experiments/osr_clinc150/open_set_identification/clinc150/filter_tabels/f1_class_prr_filtering.csv #/app/outputs/experiments/osr_text/open_set_identification/{dataset}/filter_tabels/f1_class_prr_filtering.csv
 
 caption: >
-  Prediction Rejection Ratios (PRR, $\uparrow$) for $F_1$ filtering curve for the yahoo answers dataset.
+  Prediction Rejection Ratios (PRR, $\uparrow$) for $F_1$ filtering curve for the CLINC150 dataset.
+# caption: >
+#   Prediction Rejection Ratios (PRR, $\uparrow$) for $F_1$ filtering curve for the PAN authorship identification dataset.
+# caption: >
+#   Prediction Rejection Ratios (PRR, $\uparrow$) for $F_1$ filtering curve for the yahoo answers dataset.
   
 fix_table: False
 table_lable: "tab:${task}"
@@ -33,6 +38,22 @@ sort_models_with: "used_models"
 
 used_columns_dict:
   filter:
+    clinc150:
+      [
+        "models",
+        "FAR=0.2",
+        "FAR=0.3",
+        "FAR=0.4",
+      ]
+    pan:
+      [
+        "models",
+        "FAR=0.1",
+        "FAR=0.2",
+        "FAR=0.3",
+        "FAR=0.4",
+        "FAR=0.5",
+      ]
     yahoo_answers:
       [
         "models",

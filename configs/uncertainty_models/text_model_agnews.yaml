@@ -1,0 +1,65 @@
+seed_everything: 777
+mode: train
+trainer:
+  _target_: pytorch_lightning.Trainer
+  logger:
+    _target_: pytorch_lightning.loggers.mlflow.MLFlowLogger
+    experiment_name: "Text Recongition"
+    run_name: "bert arcface agnews"
+  callbacks:
+  - _target_: pytorch_lightning.callbacks.ModelCheckpoint 
+    every_n_epochs: 1
+    dirpath: outputs/topic_agnews
+    save_last: True
+  - _target_: pytorch_lightning.callbacks.LearningRateMonitor
+    logging_interval: "step"
+  max_epochs: 4
+  #precision: 16
+  accelerator: gpu
+  devices: 1
+  num_sanity_val_steps: 0
+  log_every_n_steps: 3
+  default_root_dir: outputs/topic_agnews
+  enable_checkpointing: true
+  
+
+model:
+    _target_: training.models.arcface.MetricLearningModel
+    backbone:
+      _target_: training.models.lightning_wrappers.BERTEmbedder
+      model_name: "bert-base-uncased"
+      num_features: 768
+      bottleneck_dim: 768
+      freeze_projection: False
+      freeze_backbone: True
+    loss:
+        _target_: training.models.losses.ArcFaceLoss
+        s: 4
+    num_labels: 2
+    num_features: 768
+    optimizer_params:
+        optimizer_path: torch.optim
+        optimizer_name: AdamW
+        params:
+            lr: 2e-5
+            weight_decay: 1e-4
+    scheduler_params:
+        scheduler: OneCycleLR
+        params:
+            max_lr: 1e-2
+            steps_per_epoch: 117
+            epochs: 4
+            div_factor: 1e1
+            final_div_factor: 1e2
+        interval: step
+
+
+data:
+    _target_: training.dataset_classes.text_datasets.TextDatasets
+    tokenizer_name: "bert-base-uncased"
+    train_dataset:
+        _target_: training.dataset_classes.text_datasets.TextClassificationDataset
+        root_dir: /app/datasets/text_datasets/agnews_csv
+    batch_size: 512
+    max_length: 512
+    num_workers: 32

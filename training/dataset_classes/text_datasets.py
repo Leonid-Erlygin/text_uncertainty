@@ -218,6 +218,7 @@ class TextDatasets(pl.LightningDataModule):
         train_dataset,
         batch_size: int = 16,
         num_workers: int = 4,
+        max_length: int = 512,
         tokenizer_name: str = "bert-base-uncased",
         predict_dataset: Dataset = None,
     ):
@@ -226,6 +227,7 @@ class TextDatasets(pl.LightningDataModule):
         self.num_workers = num_workers
         self.tokenizer_name = tokenizer_name
         self.train_dataset = train_dataset
+        self.max_length = max_length
         self.predict_dataset = predict_dataset
         # Instantiate tokenizer once (in main process)
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
@@ -238,7 +240,7 @@ class TextDatasets(pl.LightningDataModule):
         texts = [item["text"] for item in batch]
 
         tokenized = self.tokenizer(
-            texts, padding=True, truncation=True, max_length=256, return_tensors="pt"
+            texts, padding=True, truncation=True, max_length=self.max_length, return_tensors="pt"
         )
 
         tokenized_inputs = {
@@ -271,7 +273,7 @@ class TextDatasets(pl.LightningDataModule):
             shuffle=True,
             drop_last=True,
             num_workers=self.num_workers,
-            collate_fn=self.collate_fn,  # <-- critical
+            collate_fn=self.collate_fn,
         )
 
 
