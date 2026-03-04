@@ -1,0 +1,337 @@
+import shutil
+import glob
+from pathlib import Path
+from typing import List, Tuple, Dict, Any, Optional
+import numpy as np
+import pandas as pd
+
+# -----------------------------------------------------------------------------
+# Configuration
+# -----------------------------------------------------------------------------
+class ProtocolConfig:
+    def __init__(self):
+        # Base Paths
+        self.base_dataset_dir = Path("/app/datasets/text_datasets")
+        self.cache_features_dir = Path("/app/cache/features")
+        
+        # Output Paths
+        self.output_ident_dir = Path("/app/datasets/text-ident")       # Test
+        self.output_ident_val_dir = Path("/app/datasets/text-ident-val") # Validation
+        
+        # Protocol Parameters
+        self.template_idx_shift = 10000  # Shift to ensure unique template IDs
+        self.gallery_template_size_fraction = 1e-2
+        self.min_gallery_template_size = 50
+        self.probe_template_size = 1     # Control samples per probe template
+        
+        # Random State
+        self.random_seed = 32
+        
+        # Datasets for embedding copy
+        self.embedding_dataset_names = ["yahoo_answers", "agnews", "dbpedia"]
+
+# -----------------------------------------------------------------------------
+# Data Loading
+# -----------------------------------------------------------------------------
+
+def load_distribution_data(protocol_path: Path, mode: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Loads in-distribution and out-of-distribution data based on mode.
+    
+    Args:
+        mode: 'test' uses *_test.csv, 'val' uses *_train.csv
+    """
+    suffix = "test" if mode == "test" else "train"
+    
+    # Load In-Distribution
+    df_in = pd.read_csv(
+        protocol_path / f"in_distribution_{suffix}.csv",
+        header=None,
+        usecols=[0, 2],
+        names=["class", "text"],
+        quotechar='"',
+    )
+    df_in["text"] = df_in["text"].str.strip("\"'")
+    
+    # Load Out-of-Distribution
+    df_ood = pd.read_csv(
+        protocol_path / f"out_distribution_{suffix}.csv",
+        header=None,
+        usecols=[0, 2],
+        names=["class", "text"],
+        quotechar='"',
+    )
+    df_ood["text"] = df_ood["text"].str.strip("\"'")
+    
+    return df_in, df_ood
+
+def save_texts_to_disk(save_dir: Path, texts: List[str], indices: List[int]) -> None:
+    """
+    Saves texts to disk using specific indices to maintain alignment with embeddings.
+    
+    Args:
+        indices: The original row indices from the dataframe. Critical for embedding alignment.
+    """
+    save_dir.mkdir(exist_ok=True, parents=True)
+    for idx, text in zip(indices, texts):
+        file_path = save_dir / f"{idx}.txt"
+        with open(file_path, 'w', encoding='utf-8') as fd:
+            fd.write(text)
+
+# -----------------------------------------------------------------------------
+# Protocol Construction Logic
+# -----------------------------------------------------------------------------
+
+def construct_splits(
+    df_in: pd.DataFrame, 
+    df_ood: pd.DataFrame, 
+    df_in_ref: Optional[pd.DataFrame], # Reference for val mode (test distribution)
+    config: ProtocolConfig, 
+    rng: np.random.Generator
+) -> Tuple[List[str], List[Any], List[int], List[str], List[Any], List[int]]:
+    """
+    Splits data into Gallery and Probe sets with template grouping.
+    
+    Args:
+        df_in_ref: If provided (val mode), use its class counts to determine gallery sizes.
+                   If None (test mode), use df_in counts.
+    """
+    known_classes, known_counts = np.unique(df_in["class"].values, return_counts=True)
+    
+    # Determine reference counts for gallery size calculation
+    ref_counts = known_counts
+    if df_in_ref is not None:
+        # Map reference classes to ensure order matches known_classes
+        ref_classes, ref_counts = np.unique(df_in_ref["class"].values, return_counts=True)
+        class_count_map = dict(zip(ref_classes, ref_counts))
+        ref_counts = np.array([class_count_map.get(c, 0) for c in known_classes])
+    
+    # Calculate gallery sizes per class
+    gallery_template_sizes = np.max(
+        np.stack([
+            np.array([config.min_gallery_template_size] * len(known_classes)),
+            (config.gallery_template_size_fraction * ref_counts).astype("int")
+        ], axis=1),
+        axis=1
+    )
+    
+    gallery_paths = []
+    gallery_sids = []
+    gallery_tids = [] 
+    
+    probe_samples_buffer = [] # Store {'path': str, 'sid': Any, 'orig_idx': int}
+
+    # Process Known Classes
+    for i, known_class in enumerate(known_classes):
+        class_mask = df_in["class"].values == known_class
+        sample_indices = np.where(class_mask)[0]
+        texts = df_in['text'].values
+        
+        # Select Gallery Samples
+        gallery_count = gallery_template_sizes[i]
+        # Safety check if class has fewer samples than required gallery size
+        gallery_count = min(gallery_count, len(sample_indices))
+        
+        gallery_indices = rng.choice(sample_indices, size=gallery_count, replace=False)
+        
+        # Remaining are Probe Samples
+        probe_indices = list(set(sample_indices) - set(gallery_indices))
+        
+        # Add to Gallery Lists (Gallery TID == SID)
+        for idx in gallery_indices:
+            gallery_paths.append(f'known_texts/{idx}.txt')
+            gallery_sids.append(known_class)
+            gallery_tids.append(known_class) 
+            
+        # Buffer Probe Samples for Grouping
+        for idx in probe_indices:
+            probe_samples_buffer.append({
+                'path': f'known_texts/{idx}.txt',
+                'sid': known_class,
+                'orig_idx': idx
+            })
+
+    # Process OOD Data (Added to Probe)
+    # IMPORTANT: Keep original indices to align with embedding files
+    ood_indices = np.arange(len(df_ood['text'].values))
+    for idx in ood_indices:
+        probe_samples_buffer.append({
+            'path': f'unknown_texts/{idx}.txt',
+            'sid': df_ood['class'].values[idx],
+            'orig_idx': idx
+        })
+        
+    # --- Group Probe Samples into Templates ---
+    probe_paths = []
+    probe_sids = []
+    probe_tids = []
+    
+    # Group buffer by Subject ID
+    probe_df = pd.DataFrame(probe_samples_buffer)
+    
+    if len(probe_df) == 0:
+        return gallery_paths, gallery_sids, gallery_tids, probe_paths, probe_sids, probe_tids
+
+    unique_sids = probe_df['sid'].unique()
+    current_tid = config.template_idx_shift
+    
+    for sid in unique_sids:
+        sid_samples = probe_df[probe_df['sid'] == sid].to_dict('records')
+        
+        # Chunk samples into probe_template_size
+        for i in range(0, len(sid_samples), config.probe_template_size):
+            chunk = sid_samples[i:i + config.probe_template_size]
+            
+            # Assign same TID to all samples in this chunk
+            for sample in chunk:
+                probe_paths.append(sample['path'])
+                probe_sids.append(sample['sid'])
+                probe_tids.append(current_tid)
+            
+            current_tid += 1
+            
+    return gallery_paths, gallery_sids, gallery_tids, probe_paths, probe_sids, probe_tids
+
+def write_metadata(
+    meta_path: Path, 
+    ds_name: str, 
+    gallery_paths: List[str], gallery_sids: List[Any], gallery_tids: List[int],
+    probe_paths: List[str], probe_sids: List[Any], probe_tids: List[int]
+) -> None:
+    """
+    Writes the metadata files (CSV and TXT) required for the protocol.
+    """
+    meta_path.mkdir(exist_ok=True, parents=True)
+    
+    # Prepare Data for TID/MID File
+    all_paths = gallery_paths + probe_paths
+    all_tids = gallery_tids + probe_tids
+    all_sids = gallery_sids + probe_sids
+    all_mids = list(range(len(all_paths)))
+    
+    # Write _face_tid_mid.txt
+    tid_mid_file = meta_path / f"{ds_name}_face_tid_mid.txt"
+    with open(tid_mid_file, "w", encoding='utf-8') as fd:
+        for name, tid, sid, mid in zip(all_paths, all_tids, all_sids, all_mids):
+            fd.write(f"{name} {tid} {mid} {sid}\n")
+            
+    # Write Probe CSV
+    probe_df = pd.DataFrame({
+        "TEMPLATE_ID": probe_tids,
+        "SUBJECT_ID": probe_sids,
+        "FILENAME": probe_paths,
+    })
+    probe_file = meta_path / f"{ds_name}_1N_probe_mixed.csv"
+    probe_df.to_csv(probe_file, sep=",", index=False)
+    
+    # Write Gallery CSV
+    gallery_df = pd.DataFrame({
+        "TEMPLATE_ID": gallery_tids,
+        "SUBJECT_ID": gallery_sids,
+        "FILENAME": gallery_paths,
+    })
+    gallery_file = meta_path / f"{ds_name}_1N_gallery_G1.csv"
+    gallery_df.to_csv(gallery_file, sep=",", index=False)
+
+def copy_embeddings(config: ProtocolConfig, mode: str) -> None:
+    """
+    Copies pre-computed embeddings from cache to the dataset directories.
+    """
+    if mode == "test":
+        base_output_dir = config.output_ident_dir
+        suffix = "test"
+    else:
+        base_output_dir = config.output_ident_val_dir
+        suffix = "val"
+        
+    for name in config.embedding_dataset_names:
+        embeddings_dir = base_output_dir / f"{name}-{suffix}" / "embeddings"
+        embeddings_dir.mkdir(exist_ok=True, parents=True)
+        
+        src = config.cache_features_dir / f"scf_2epoch_topic_{name}_{suffix}_embs.npz"
+        
+        if src.is_file():
+            shutil.copyfile(src, embeddings_dir / f"scf_embs_{name}.npz")
+        else:
+            print(f"Warning: Embedding file not found: {src}")
+
+def construct_protocol(protocol_path: Path, config: ProtocolConfig, rng: np.random.Generator, mode: str = "test") -> None:
+    """
+    Main function to construct a protocol (Test or Validation).
+    """
+    ds_name = protocol_path.stem.lower()
+    output_dir = config.output_ident_dir if mode == "test" else config.output_ident_val_dir
+    
+    print(f"Processing {mode} protocol: {ds_name}")
+    
+    # 1. Load Data
+    df_in, df_ood = load_distribution_data(protocol_path, mode)
+    
+    # For Validation, load Test data as reference for distribution matching
+    df_in_ref = None
+    if mode == "val":
+        df_in_ref, _ = load_distribution_data(protocol_path, "test")
+    
+    # 2. Save Texts to Disk (Using original indices for embedding alignment)
+    save_texts_to_disk(
+        output_dir / ds_name / 'known_texts', 
+        df_in['text'].values,
+        df_in.index.tolist()
+    )
+    save_texts_to_disk(
+        output_dir / ds_name / 'unknown_texts', 
+        df_ood['text'].values,
+        df_ood.index.tolist()
+    )
+    
+    # 3. Construct Splits
+    (gallery_paths, gallery_sids, gallery_tids, 
+     probe_paths, probe_sids, probe_tids) = construct_splits(
+         df_in, df_ood, df_in_ref, config, rng
+     )
+     
+    # 4. Write Metadata
+    meta_path = output_dir / ds_name / "meta"
+    write_metadata(
+        meta_path, ds_name,
+        gallery_paths, gallery_sids, gallery_tids,
+        probe_paths, probe_sids, probe_tids
+    )
+
+# -----------------------------------------------------------------------------
+# Main Execution
+# -----------------------------------------------------------------------------
+
+def main():
+    config = ProtocolConfig()
+    rng = np.random.default_rng(config.random_seed)
+    
+    # Ensure output directories exist
+    config.output_ident_dir.mkdir(exist_ok=True, parents=True)
+    config.output_ident_val_dir.mkdir(exist_ok=True, parents=True)
+    
+    # Find all protocol CSVs
+    protocol_paths = list(glob.glob(str(config.base_dataset_dir / "*_csv")))
+    
+    if not protocol_paths:
+        print(f"No protocols found in {config.base_dataset_dir}")
+        return
+
+    # 1. Construct Test Protocols
+    for protocol_path_str in protocol_paths:
+        protocol_path = Path(protocol_path_str)
+        construct_protocol(protocol_path, config, rng, mode="test")
+        
+    # 2. Construct Validation Protocols
+    for protocol_path_str in protocol_paths:
+        protocol_path = Path(protocol_path_str)
+        construct_protocol(protocol_path, config, rng, mode="val")
+    
+    #3. Copy Embeddings
+    copy_embeddings(config, mode="test")
+    copy_embeddings(config, mode="val")
+    
+    print("Protocol construction complete.")
+
+if __name__ == "__main__":
+    main()
