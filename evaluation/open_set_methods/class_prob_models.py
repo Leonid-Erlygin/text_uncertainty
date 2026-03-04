@@ -173,7 +173,7 @@ class MonteCarloPredictiveProb:
             # find kappa
             is_seen = np.isin(probe_unique_ids, g_unique_ids)
             kappa_low = 300
-            kappa_high = 150000
+            kappa_high = 400000
             max_iter = 20
             eps = 0.0005
             far_loss_func = FarLossCalc(
@@ -238,7 +238,7 @@ class MonteCarloPredictiveProb:
                 "template_pooled_data_unc"
             ]
             kappa_low = 200
-            kappa_high = 150000
+            kappa_high = 400000
             max_iter = 20
             eps = 0.0005
             far_loss_func_calib = FarLossCalc(
@@ -516,5 +516,7 @@ class MonteCarloPredictiveProb:
             kl2_per_sample = p0 * log_arg  # (N, M)
             kl_2 = torch.mean(kl2_per_sample, dim=1)  # (N,)
         else:
+            raise ValueError
+        if np.isnan(np.sum(kl_1.cpu().numpy())) or np.isnan(np.sum(kl_2.cpu().numpy())):
             raise ValueError
         return mean_gallery_probs, kl_1, kl_2

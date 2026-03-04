@@ -24,7 +24,7 @@ class ProtocolConfig:
         # self.checkpoint_path = Path("/app/outputs/text_scf/topic_dbpedia/last.ckpt")
         # Note: If you have specific checkpoints per dataset, use a dict:
         self.checkpoint_paths = {
-            "yahoo": "/app/outputs/text_scf/yahoo_answers/last.ckpt",
+            "yahoo": "/app/outputs/text_scf/topic_yahoo/last.ckpt",
             "agnews": "/app/outputs/text_scf/topic_agnews/last.ckpt",
             "dbpedia": "/app/outputs/text_scf/topic_dbpedia/last.ckpt",
         }
@@ -287,7 +287,7 @@ def construct_protocol(
     """
     Main function to construct a protocol (Test or Validation).
     """
-    ds_name = protocol_path.stem.lower().split('_')[0]
+    ds_name = protocol_path.stem.lower().split("_")[0]
     output_dir = (
         config.output_ident_dir if mode == "test" else config.output_ident_val_dir
     )
@@ -471,16 +471,16 @@ def main():
         return
 
     # 1. Construct Test Protocols
-    print("\n=== Constructing Test Protocols ===")
-    for protocol_path_str in protocol_paths:
-        protocol_path = Path(protocol_path_str)
-        construct_protocol(protocol_path, config, rng, mode="test")
+    # print("\n=== Constructing Test Protocols ===")
+    # for protocol_path_str in protocol_paths:
+    #     protocol_path = Path(protocol_path_str)
+    #     construct_protocol(protocol_path, config, rng, mode="test")
 
-    # 2. Construct Validation Protocols
-    print("\n=== Constructing Validation Protocols ===")
-    for protocol_path_str in protocol_paths:
-        protocol_path = Path(protocol_path_str)
-        construct_protocol(protocol_path, config, rng, mode="val")
+    # # 2. Construct Validation Protocols
+    # print("\n=== Constructing Validation Protocols ===")
+    # for protocol_path_str in protocol_paths:
+    #     protocol_path = Path(protocol_path_str)
+    #     construct_protocol(protocol_path, config, rng, mode="val")
 
     # 3. Compute Embeddings (NEW STEP)
     # print("\n=== Computing Embeddings ===")
@@ -488,8 +488,8 @@ def main():
 
     # 4. Copy Embeddings
     print("\n=== Copying Embeddings ===")
-    # copy_embeddings(config, mode="test")
-    # copy_embeddings(config, mode="val")
+    copy_embeddings(config, mode="test")
+    copy_embeddings(config, mode="val")
 
     print("\n=== Protocol Construction Complete ===")
 
