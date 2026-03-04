@@ -24,7 +24,7 @@ class ProtocolConfig:
         # self.checkpoint_path = Path("/app/outputs/text_scf/topic_dbpedia/last.ckpt")
         # Note: If you have specific checkpoints per dataset, use a dict:
         self.checkpoint_paths = {
-            "yahoo": "/app/outputs/text_scf/topic_yahoo_answers/last.ckpt",
+            "yahoo": "/app/outputs/text_scf/yahoo_answers/last.ckpt",
             "agnews": "/app/outputs/text_scf/topic_agnews/last.ckpt",
             "dbpedia": "/app/outputs/text_scf/topic_dbpedia/last.ckpt",
         }
@@ -33,7 +33,7 @@ class ProtocolConfig:
         self.template_idx_shift = 10000
         self.gallery_template_size_fraction = 1e-2
         self.min_gallery_template_size = 50
-        self.probe_template_size = 1
+        self.probe_template_size = 5
 
         # Random State
         self.random_seed = 32
@@ -52,13 +52,13 @@ class ProtocolConfig:
 
 
 def load_distribution_data(
-    protocol_path: Path, mode: str, match_test_ood_count: bool = False
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    protocol_path: Path, mode: str, rng: np.random.Generator
+) -> Tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]:
     """
     Loads in-distribution and out-of-distribution data based on mode.
 
-    Args:
-        match_test_ood_count: If True (val mode), subsample OOD to match test set size
+    Returns:
+        df_in, df_ood, df_in_test (only for val mode, used for subsampling)
     """
     suffix = "test" if mode == "test" else "train"
 
@@ -80,8 +80,18 @@ def load_distribution_data(
     )
     df_ood["text"] = df_ood["text"].str.strip("\"'")
 
-    # Subsample OOD for validation to match test set size
-    if match_test_ood_count and mode == "val":
+    # Load test data for subsampling reference (val mode only)
+    df_in_test = None
+    if mode == "val":
+        df_in_test = pd.read_csv(
+            protocol_path / "in_distribution_test.csv",
+            header=None,
+            usecols=[0, 2],
+            names=["class", "text"],
+            quotechar='"',
+        )
+        df_in_test["text"] = df_in_test["text"].str.strip("\"'")
+
         df_ood_test = pd.read_csv(
             protocol_path / "out_distribution_test.csv",
             header=None,
@@ -89,14 +99,14 @@ def load_distribution_data(
             names=["class", "text"],
             quotechar='"',
         )
+
+        # Subsample OOD to match test count
         test_ood_count = len(df_ood_test)
         if len(df_ood) > test_ood_count:
-            ood_indices = np.random.default_rng(32).choice(
-                len(df_ood), size=test_ood_count, replace=False
-            )
+            ood_indices = rng.choice(len(df_ood), size=test_ood_count, replace=False)
             df_ood = df_ood.iloc[ood_indices].reset_index(drop=True)
 
-    return df_in, df_ood
+    return df_in, df_ood, df_in_test
 
 
 def save_texts_to_disk(save_dir: Path, texts: List[str], indices: List[int]) -> None:
@@ -284,17 +294,31 @@ def construct_protocol(
 
     print(f"Processing {mode} protocol: {ds_name}")
 
-    # Load data with OOD subsampling for val mode
-    df_in, df_ood = load_distribution_data(
-        protocol_path,
-        mode,
-        match_test_ood_count=(mode == "val"),  # ← Enable subsampling for val
-    )
+    # Load data
+    df_in, df_ood, df_in_test = load_distribution_data(protocol_path, mode, rng)
 
-    df_in_ref = None
-    if mode == "val":
-        df_in_ref, _ = load_distribution_data(protocol_path, "test")
+    # Subsample known texts for validation to match test class distribution
+    if mode == "val" and df_in_test is not None:
+        known_classes_test, known_count_test = np.unique(
+            df_in_test["class"].values, return_counts=True
+        )
+        class_count_map = dict(zip(known_classes_test, known_count_test))
 
+        subsampled_indices = []
+        for known_class in known_classes_test:
+            class_mask = df_in["class"].values == known_class
+            class_indices = np.where(class_mask)[0]
+            target_count = class_count_map.get(known_class, 0)
+
+            if len(class_indices) > target_count:
+                selected = rng.choice(class_indices, size=target_count, replace=False)
+                subsampled_indices.extend(selected)
+            else:
+                subsampled_indices.extend(class_indices)
+
+        df_in = df_in.iloc[subsampled_indices].reset_index(drop=True)
+
+    # Save texts to disk (using original indices for embedding alignment)
     save_texts_to_disk(
         output_dir / ds_name / "known_texts", df_in["text"].values, df_in.index.tolist()
     )
@@ -304,10 +328,13 @@ def construct_protocol(
         df_ood.index.tolist(),
     )
 
+    # Construct splits
+    df_in_ref = df_in_test if mode == "val" else None
     (gallery_paths, gallery_sids, gallery_tids, probe_paths, probe_sids, probe_tids) = (
         construct_splits(df_in, df_ood, df_in_ref, config, rng)
     )
 
+    # Write metadata
     meta_path = output_dir / ds_name / "meta"
     write_metadata(
         meta_path,
@@ -427,8 +454,8 @@ def copy_embeddings(config: ProtocolConfig, mode: str) -> None:
 
 def main():
     config = ProtocolConfig()
-    shutil.rmtree(config.output_ident_dir)
-    shutil.rmtree(config.output_ident_val_dir)
+    # shutil.rmtree(config.output_ident_dir)
+    # shutil.rmtree(config.output_ident_val_dir)
     rng = np.random.default_rng(config.random_seed)
 
     # Ensure output directories exist
@@ -457,12 +484,12 @@ def main():
 
     # 3. Compute Embeddings (NEW STEP)
     # print("\n=== Computing Embeddings ===")
-    compute_embeddings(config)
+    # compute_embeddings(config)
 
     # 4. Copy Embeddings
     print("\n=== Copying Embeddings ===")
-    copy_embeddings(config, mode="test")
-    copy_embeddings(config, mode="val")
+    # copy_embeddings(config, mode="test")
+    # copy_embeddings(config, mode="val")
 
     print("\n=== Protocol Construction Complete ===")
 
