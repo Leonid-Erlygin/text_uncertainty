@@ -72,16 +72,16 @@ data:
     tokenizer_name: "bert-base-uncased"
     train_dataset:
         _target_: training.dataset_classes.text_datasets.TextClassificationDataset
-        root_dir: /app/datasets/text_datasets/yahoo_answers_csv
+        root_dir: /app/datasets/text_datasets/yahoo_csv
     # predict_dataset:
     #     _target_: training.dataset_classes.text_datasets.TextPredictionDataset
     #     root_dir: /app/datasets/text-ident-val/yahoo
     predict_dataset:
         _target_: training.dataset_classes.text_datasets.TextPredictionDataset
-        root_dir: /app/datasets/text-ident/yahoo_answers
+        root_dir: /app/datasets/text-ident/yahoo
     # predict_dataset:
     #     _target_: training.dataset_classes.text_datasets.TextPredictionDataset
-    #     root_dir: /app/datasets/text-ident/yahoo_answers
+    #     root_dir: /app/datasets/text-ident/yahoo
     batch_size: 512
     max_length: 512
     num_workers: 32
