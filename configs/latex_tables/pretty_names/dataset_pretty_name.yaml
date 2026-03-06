@@ -2,3 +2,6 @@ IJBC: "IJB-C"
 IJBB: "IJB-B"
 whale: "Whale"
 large_12k-perspk5: "VB-Eval-L-5"
+yahoo: Yahoo Answers
+agnews: AGNews
+dbpedia: DBPedia

@@ -13,13 +13,13 @@ test_datasets:
   #   dataset_name: yahoo
   #   dataset_path: /app/datasets/text-ident/yahoo
 
-  - _target_: evaluation.test_datasets.FaceRecogntionDataset
-    dataset_name: dbpedia
-    dataset_path: /app/datasets/text-ident/dbpedia
-    
   # - _target_: evaluation.test_datasets.FaceRecogntionDataset
-  #   dataset_name: agnews
-  #   dataset_path: /app/datasets/text-ident/agnews
+  #   dataset_name: dbpedia
+  #   dataset_path: /app/datasets/text-ident/dbpedia
+    
+  - _target_: evaluation.test_datasets.FaceRecogntionDataset
+    dataset_name: agnews
+    dataset_path: /app/datasets/text-ident/agnews
 
 
 
@@ -97,29 +97,27 @@ open_set_identification_uncertainty_metrics:
       _target_: evaluation.metrics.F1_classic
 
 beta_list: [0.5] # [1e-5] #[0.5]
-far_list: [0.2] #[0.2, 0.3, 0.4, 0.5] #[0.01, 0.05, 0.1, 0.2] #[0.1, 0.2] #
+far_list: [0.1, 0.2, 0.3, 0.4, 0.5] #[0.2] #[0.2, 0.3, 0.4, 0.5] #[0.01, 0.05, 0.1, 0.2] #[0.1, 0.2] #
 display_oracle_curve: True
 
 open_set_identification_methods:
 
   - embeddings: scf
     gallery_template_pooling_strategy:
-      _target_: evaluation.template_pooling_strategies.PoolingDefault  
+      _target_: evaluation.template_pooling_strategies.PoolingDefault
     probe_template_pooling_strategy:
       _target_: evaluation.template_pooling_strategies.PoolingDefault
     recognition_method:
-      _target_: evaluation.open_set_methods.posterior_prob_based.PosteriorProbability
+      _target_: evaluation.open_set_methods.score_function_based.SimilarityBasedPrediction
       distance_function: 
         _target_: evaluation.distance_functions.open_set_identification.CosineSim
-      class_model: power
-      far: ${far_list}
-      beta: 0.5
-      uncertainty_type: maxprob
+      acceptance_score: 
+        _target_: evaluation.confidence_functions.MaxSimilarity_confidence
+      uncertainty_function:
+        _target_: evaluation.open_set_methods.uncertainty_functions.BernoulliVariance
       alpha: 0
-      aggregation: sum
-      predict_T: null
-      T_data_unc: 1
-    pretty_name: "GalUE"
+      calib_strategy: "norm_val"
+    pretty_name: "AccScr"
 
   - embeddings: scf
     gallery_template_pooling_strategy:
@@ -140,20 +138,24 @@ open_set_identification_methods:
 
   - embeddings: scf
     gallery_template_pooling_strategy:
-      _target_: evaluation.template_pooling_strategies.PoolingDefault
+      _target_: evaluation.template_pooling_strategies.PoolingDefault  
     probe_template_pooling_strategy:
       _target_: evaluation.template_pooling_strategies.PoolingDefault
     recognition_method:
-      _target_: evaluation.open_set_methods.score_function_based.SimilarityBasedPrediction
+      _target_: evaluation.open_set_methods.posterior_prob_based.PosteriorProbability
       distance_function: 
         _target_: evaluation.distance_functions.open_set_identification.CosineSim
-      acceptance_score: 
-        _target_: evaluation.confidence_functions.MaxSimilarity_confidence
-      uncertainty_function:
-        _target_: evaluation.open_set_methods.uncertainty_functions.BernoulliVariance
+      class_model: power
+      far: ${far_list}
+      beta: 0.5
+      uncertainty_type: maxprob
       alpha: 0
-      calib_strategy: "norm_val"
-    pretty_name: "AccScr"
+      aggregation: sum
+      predict_T: null
+      T_data_unc: 1
+    pretty_name: "GalUE"
+
+
 
   - embeddings: scf
     gallery_template_pooling_strategy:

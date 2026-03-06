@@ -6,9 +6,8 @@ from hydra.core.hydra_config import HydraConfig
 from omegaconf import OmegaConf
 
 
-def compute_best_values(table, metric_order):
+def compute_best_values(table, metric_order, round_num=3):  # Added round_num parameter
     numerics = ["int16", "int32", "int64", "float16", "float32", "float64"]
-
     newdf = table.select_dtypes(include=numerics)
     best_values = {}
     for column_name in newdf.columns:
@@ -18,7 +17,8 @@ def compute_best_values(table, metric_order):
             sorted_values = np.sort(table[column_name].values)
         else:
             raise ValueError
-        best_values[column_name] = (sorted_values[0], sorted_values[1])
+        # Round the best values before storing
+        best_values[column_name] = (np.round(sorted_values[0], round_num), np.round(sorted_values[1], round_num))
     return best_values
 
 
@@ -26,6 +26,7 @@ def create_table_head(result_latex_code, caption, table_lable, cfg):
     used_columns = cfg.used_columns_dict[cfg.task]
     column_count = 0
     fars = [""]
+    num_fars = len(used_columns[cfg.datasets[0]]) - 1
     for key in used_columns:
         if key not in cfg.datasets:
             continue
@@ -62,7 +63,7 @@ def create_table_head(result_latex_code, caption, table_lable, cfg):
         result_latex_code += " "
         for dataset in cfg.datasets:
             dataset_pretty_name = cfg.pretty_name.dataset[dataset]
-            result_latex_code += "& \\multicolumn{3}{c}{" + dataset_pretty_name + "} "
+            result_latex_code += "& \\multicolumn{"+str(num_fars)+"}{c}{" + dataset_pretty_name + "} "
         result_latex_code += "\\\\\n"
         result_latex_code += "\\midrule\n"
     return result_latex_code
@@ -83,7 +84,7 @@ def create_table_body(result_latex_code, cfg):
         )
         dataset_to_metrics[dataset] = all_metric_values[used_columns]
         dataset_to_best_values[dataset] = compute_best_values(
-            all_metric_values[used_columns], cfg.metric_order
+            all_metric_values[used_columns], cfg.metric_order, cfg.round_num  # Pass round_num
         )
     table = dataset_to_metrics[cfg.datasets[0]].set_index("models")
     best_values = pd.DataFrame(dataset_to_best_values[cfg.datasets[0]])
@@ -102,23 +103,24 @@ def create_table_body(result_latex_code, cfg):
                 else:
                     result_latex_code += cfg.pretty_name.model[row[column_name]] + " & "
             elif column_name != "models":
-                # metric value
+                # metric value - round first before comparison
                 metric_value = row.iloc[column_index]
-                if metric_value == best_values.iloc[0, column_index - 1]:
+                rounded_value = np.round(metric_value, cfg.round_num)  # Round first
+                if rounded_value == best_values.iloc[0, column_index - 1]:  # Compare rounded values
                     # best value
                     result_latex_code += (
-                        "\\textbf{" + str(np.round(metric_value, cfg.round_num)) + "} "
+                        "\\textbf{" + str(rounded_value) + "} "
                     )
-                elif metric_value == best_values.iloc[1, column_index - 1]:
+                elif rounded_value == best_values.iloc[1, column_index - 1]:  # Compare rounded values
                     # second best value
                     result_latex_code += (
                         "\\underline{"
-                        + str(np.round(metric_value, cfg.round_num))
+                        + str(rounded_value)
                         + "} "
                     )
                 else:
                     result_latex_code += (
-                        f" {str(np.round(metric_value, cfg.round_num))} "
+                        f" {str(rounded_value)} "
                     )
                 if column_index < len(table.columns) - 1:
                     result_latex_code += "& "
