@@ -5,3 +5,5 @@ large_12k-perspk5: "VB-Eval-L-5"
 yahoo: Yahoo Answers
 agnews: AGNews
 dbpedia: DBPedia
+pan_test: PAN-20-AV
+clinc150: CLINC150
