@@ -18,7 +18,10 @@ def compute_best_values(table, metric_order, round_num=3):  # Added round_num pa
         else:
             raise ValueError
         # Round the best values before storing
-        best_values[column_name] = (np.round(sorted_values[0], round_num), np.round(sorted_values[1], round_num))
+        best_values[column_name] = (
+            np.round(sorted_values[0], round_num),
+            np.round(sorted_values[1], round_num),
+        )
     return best_values
 
 
@@ -63,7 +66,13 @@ def create_table_head(result_latex_code, caption, table_lable, cfg):
         result_latex_code += " "
         for dataset in cfg.datasets:
             dataset_pretty_name = cfg.pretty_name.dataset[dataset]
-            result_latex_code += "& \\multicolumn{"+str(num_fars)+"}{c}{" + dataset_pretty_name + "} "
+            result_latex_code += (
+                "& \\multicolumn{"
+                + str(num_fars)
+                + "}{c}{"
+                + dataset_pretty_name
+                + "} "
+            )
         result_latex_code += "\\\\\n"
         result_latex_code += "\\midrule\n"
     return result_latex_code
@@ -84,7 +93,9 @@ def create_table_body(result_latex_code, cfg):
         )
         dataset_to_metrics[dataset] = all_metric_values[used_columns]
         dataset_to_best_values[dataset] = compute_best_values(
-            all_metric_values[used_columns], cfg.metric_order, cfg.round_num  # Pass round_num
+            all_metric_values[used_columns],
+            cfg.metric_order,
+            cfg.round_num,  # Pass round_num
         )
     table = dataset_to_metrics[cfg.datasets[0]].set_index("models")
     best_values = pd.DataFrame(dataset_to_best_values[cfg.datasets[0]])
@@ -106,22 +117,18 @@ def create_table_body(result_latex_code, cfg):
                 # metric value - round first before comparison
                 metric_value = row.iloc[column_index]
                 rounded_value = np.round(metric_value, cfg.round_num)  # Round first
-                if rounded_value == best_values.iloc[0, column_index - 1]:  # Compare rounded values
+                if (
+                    rounded_value == best_values.iloc[0, column_index - 1]
+                ):  # Compare rounded values
                     # best value
-                    result_latex_code += (
-                        "\\textbf{" + str(rounded_value) + "} "
-                    )
-                elif rounded_value == best_values.iloc[1, column_index - 1]:  # Compare rounded values
+                    result_latex_code += "\\textbf{" + str(rounded_value) + "} "
+                elif (
+                    rounded_value == best_values.iloc[1, column_index - 1]
+                ):  # Compare rounded values
                     # second best value
-                    result_latex_code += (
-                        "\\underline{"
-                        + str(rounded_value)
-                        + "} "
-                    )
+                    result_latex_code += "\\underline{" + str(rounded_value) + "} "
                 else:
-                    result_latex_code += (
-                        f" {str(rounded_value)} "
-                    )
+                    result_latex_code += f" {str(rounded_value)} "
                 if column_index < len(table.columns) - 1:
                     result_latex_code += "& "
                 else:
